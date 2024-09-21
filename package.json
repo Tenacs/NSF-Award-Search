@@ -7,7 +7,7 @@
     "flask-dev:win": "cross-env FLASK_DEBUG=1 venv\\Scripts\\pip install -r requirements.txt && venv\\Scripts\\python -m flask --app api/index run -p 5328",
     "flask-dev": "run-s flask-dev:win || run-s flask-dev:unix",
     "next-dev": "next dev",
-    "dev": "concurrently \"pnpm run next-dev\" \"pnpm run flask-dev\"",
+    "dev": "concurrently \"npm run next-dev\" \"npm run flask-dev\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
