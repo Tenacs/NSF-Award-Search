@@ -38,29 +38,40 @@ You can clone & deploy it to Vercel with one click:
 You can clone & create this repo with the following command
 
 ```bash
-npx create-next-app nextjs-flask --example "https://github.com/vercel/examples/tree/main/python/nextjs-flask"
+git clone https://github.com/Tenacs/NSF-Award-Search.git
 ```
 
 ## Getting Started
 
-First, install the dependencies:
+First, Set Up a Virtual Environment (venv):
+
+```bash
+python -m venv venv
+```
+Activate the virtual environment:
+
+- macOS/Linux:
+
+  ```bash
+  source venv/bin/activate
+  ```
+
+- Windows:
+
+  ```bash
+  venv\Scripts\activate
+  ```
+
+Then, install the dependencies:
 
 ```bash
 npm install
-# or
-yarn
-# or
-pnpm install
 ```
 
 Then, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
