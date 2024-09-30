@@ -13,26 +13,37 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export function SearchBar() {
   const [activeTab, setActiveTab] = useState('award')
-  const [awardQuery, setAwardQuery] = useState('')
-  const [nameQuery, setNameQuery] = useState('')
-  const [includeCoPI, setIncludeCoPI] = useState(false)
-  const [programQuery, setProgramQuery] = useState('')
-  const [programOfficer, setProgramOfficer] = useState('')
-  const [elementCode, setElementCode] = useState('')
-  const [referenceCode, setReferenceCode] = useState('')
-  const [organizationQuery, setOrganizationQuery] = useState('')
-  const [state, setState] = useState('')
-  const [zipCode, setZipCode] = useState('')
-  const [country, setCountry] = useState('')
-  const [startYear, setStartYear] = useState(2000)
-  const [endYear, setEndYear] = useState(2024)
   const [showStatistics, setShowStatistics] = useState(false)
 
+  const [searchQuery, setSearchQuery] = useState({
+    award: '',
+    name: '',
+    includeCoPI: true,
+    program: '',
+    programOfficer: '',
+    elementCode: '',
+    referenceCode: '',
+    organization: '',
+    state: '',
+    zipCode: '',
+    country: '',
+    startYear: 2000,
+    endYear: 2024
+  })
+
+
   useEffect(() => {
-    if (startYear > endYear) {
-      setEndYear(startYear)
+    if (searchQuery.startYear > searchQuery.endYear) {
+      setSearchQuery((prev) => ({...prev, startYear: searchQuery.endYear}))
     }
-  }, [startYear, endYear])
+  }, [searchQuery.startYear])
+
+  useEffect(() => {
+    if (searchQuery.endYear < searchQuery.startYear) {
+      setSearchQuery((prev) => ({...prev, endYear: searchQuery.startYear}))
+    }
+  }, [searchQuery.endYear])
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,12 +62,11 @@ export function SearchBar() {
         </TabsList>
         <TabsContent value="award">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="award">Award Title/Award ID</Label>
+            <div className='pt-3'>
               <Input
                 id="award"
-                value={awardQuery}
-                onChange={(e) => setAwardQuery(e.target.value)}
+                value={searchQuery.award}
+                onChange={(e) => setSearchQuery((prev) => ({...prev, award: e.target.value}))}
                 placeholder="Enter Award Title or Award ID"
               />
             </div>
@@ -66,20 +76,19 @@ export function SearchBar() {
         </TabsContent>
         <TabsContent value="name">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="name">Name</Label>
+            <div className='pt-3'>
               <Input
                 id="name"
-                value={nameQuery}
-                onChange={(e) => setNameQuery(e.target.value)}
+                value={searchQuery.name}
+                onChange={(e) => setSearchQuery((prev) => ({...prev, name: e.target.value}))}
                 placeholder="Enter name"
               />
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox 
                 id="includeCoPI" 
-                checked={includeCoPI}
-                onCheckedChange={(checked) => setIncludeCoPI(checked as boolean)}
+                checked={searchQuery.includeCoPI}
+                onCheckedChange={(checked) => setSearchQuery((prev) => ({...prev, includeCoPI: checked as boolean}))}
               />
               <Label htmlFor="includeCoPI">Include Co-Principal Investigator in name search</Label>
             </div>
@@ -91,7 +100,7 @@ export function SearchBar() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="program">Program</Label>
-              <Select onValueChange={setProgramQuery} value={programQuery}>
+              <Select onValueChange={(value) => setSearchQuery((prev) => ({...prev, program: value}))} value={searchQuery.program}>
                 <SelectTrigger id="program">
                   <SelectValue placeholder="Select a program" />
                 </SelectTrigger>
@@ -182,8 +191,8 @@ export function SearchBar() {
               <Label htmlFor="programOfficer">Program Officer</Label>
               <Input
                 id="programOfficer"
-                value={programOfficer}
-                onChange={(e) => setProgramOfficer(e.target.value)}
+                value={searchQuery.programOfficer}
+                onChange={(e) => setSearchQuery((prev) => ({...prev, programOfficer: e.target.value}))}
                 placeholder="Enter Program Officer name"
               />
             </div>
@@ -192,8 +201,8 @@ export function SearchBar() {
                 <Label htmlFor="elementCode">Element Code</Label>
                 <Input
                   id="elementCode"
-                  value={elementCode}
-                  onChange={(e) => setElementCode(e.target.value)}
+                  value={searchQuery.elementCode}
+                  onChange={(e) => setSearchQuery((prev) => ({...prev, elementCode: e.target.value}))}
                   placeholder="Enter Element Code"
                 />
               </div>
@@ -201,8 +210,8 @@ export function SearchBar() {
                 <Label htmlFor="referenceCode">Reference Code</Label>
                 <Input
                   id="referenceCode"
-                  value={referenceCode}
-                  onChange={(e) => setReferenceCode(e.target.value)}
+                  value={searchQuery.referenceCode}
+                  onChange={(e) => setSearchQuery((prev) => ({...prev, referenceCode: e.target.value}))}
                   placeholder="Enter Reference Code"
                 />
               </div>
@@ -214,12 +223,11 @@ export function SearchBar() {
         </TabsContent>
         <TabsContent value="organization">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="organization">Organization/University</Label>
+            <div className='pt-3'>
               <Input
                 id="organization"
-                value={organizationQuery}
-                onChange={(e) => setOrganizationQuery(e.target.value)}
+                value={searchQuery.organization}
+                onChange={(e) => setSearchQuery((prev) => ({...prev, organization: e.target.value}))}
                 placeholder="Enter organization name"
               />
             </div>
@@ -242,7 +250,7 @@ export function SearchBar() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="state">State</Label>
-                <Select onValueChange={setState} value={state}>
+                <Select onValueChange={(value) => setSearchQuery((prev) => ({...prev, state: value}))} value={searchQuery.state}>
                   <SelectTrigger id="state">
                     <SelectValue placeholder="Select a state" />
                   </SelectTrigger>
@@ -304,14 +312,14 @@ export function SearchBar() {
                 <Label htmlFor="zipCode">Zip Code</Label>
                 <Input
                   id="zipCode"
-                  value={zipCode}
-                  onChange={(e) => setZipCode(e.target.value)}
+                  value={searchQuery.zipCode}
+                  onChange={(e) => setSearchQuery((prev) => ({...prev, zipCode: e.target.value}))}
                   placeholder="Enter zip code"
                 />
               </div>
               <div>
                 <Label htmlFor="country">Country</Label>
-                <Select onValueChange={setCountry} value={country}>
+                <Select onValueChange={(value) => setSearchQuery((prev) => ({...prev, country: value}))} value={searchQuery.country}>
                   <SelectTrigger id="country">
                     <SelectValue placeholder="Select a country" />
                   </SelectTrigger>
@@ -336,12 +344,12 @@ export function SearchBar() {
                   min={2000}
                   max={2024}
                   step={1}
-                  value={[startYear]}
-                  onValueChange={(value) => setStartYear(value[0])}
+                  value={[searchQuery.startYear]}
+                  onValueChange={(value) => setSearchQuery((prev) => ({...prev, startYear: value[0]}))}
                   className="mt-2"
                 />
                 <div className="flex justify-between mt-1">
-                  <span>{startYear}</span>
+                  <span>{searchQuery.startYear}</span>
                 </div>
               </div>
               <div className="col-span-full">
@@ -350,12 +358,12 @@ export function SearchBar() {
                   min={2000}
                   max={2024}
                   step={1}
-                  value={[endYear]}
-                  onValueChange={(value) => setEndYear(value[0])}
+                  value={[searchQuery.endYear]}
+                  onValueChange={(value) => setSearchQuery((prev) => ({...prev, endYear: value[0]}))}
                   className="mt-2"
                 />
                 <div className="flex justify-between mt-1">
-                  <span>{endYear}</span>
+                  <span>{searchQuery.endYear}</span>
                 </div>
               </div>
             </div>
