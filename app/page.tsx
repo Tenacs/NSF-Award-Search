@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useRouter } from 'next/navigation'
+import Plotly from 'plotly.js-dist'
+
 
 export default function SearchBar() {
   const [activeTab, setActiveTab] = useState('award')
@@ -31,8 +33,9 @@ export default function SearchBar() {
     startYear: 2010,
     endYear: 2024
   })
+  
 
-
+  // Handle edge case where start year is greater than end year for advanced filters
   useEffect(() => {
     if (searchQuery.startYear > searchQuery.endYear) {
       setSearchQuery((prev) => ({...prev, startYear: searchQuery.endYear}))
@@ -50,6 +53,26 @@ export default function SearchBar() {
     e.preventDefault()
     router.push("/api/awards")
   }
+
+
+
+  useEffect(() => {
+
+    fetch('/api/search_institution?institution=florida')
+      .then((res) => res.json())
+      .then((awardData) => {
+
+        Plotly.newPlot("plotDiv", {
+          data: [awardData[0]],
+          layout: { width: 600, height: 400 }
+        });
+
+
+      })
+
+    
+  }, []);
+
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
@@ -239,6 +262,9 @@ export default function SearchBar() {
           </TabsContent>
         </Tabs>
       </div>
+
+
+      <div id="plotDiv"></div>
     </main>
   )
 
