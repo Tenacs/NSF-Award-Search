@@ -11,8 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useRouter } from 'next/navigation'
-// @ts-expect-error miss type declaration
-import Plotly from 'plotly.js-dist'
+import dynamic from "next/dynamic";
+
 
 
 export default function SearchBar() {
@@ -63,12 +63,16 @@ export default function SearchBar() {
       .then((res) => res.json())
       .then((awardData) => {
 
-        Plotly.newPlot("plotDiv", {
-          data: [awardData[0]],
-          layout: { width: 600, height: 400 }
+        import('plotly.js-dist-min')
+        .then((Plotly) => {
+
+          Plotly.newPlot(
+            "plotDiv",
+            awardData[0],
+            { width: 600, height: 400 }
+          );
+          
         });
-
-
       })
 
     
