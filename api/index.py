@@ -36,6 +36,20 @@ def search_by_institution():
     query = "SELECT * FROM awards WHERE institution LIKE ?"
     return query_to_json(query, (f"%{institution_name}%",))
 
+# Search by Investigator Name
+@app.route('/search_name', methods=['GET'])
+def search_by_name():
+    investigator_name = request.args.get('name')
+    query = "SELECT * FROM investigators WHERE name LIKE ?"
+    return query_to_json(query, (f"%{investigator_name}%",))
+
+#Search by Organization Abbreviation
+@app.route('/search_org_abbr', methods=['GET'])
+def search_by_org_abbr():
+    org_abbr = request.args.get('org_abbr')
+    query = "SELECT * FROM awards WHERE org_abbr LIKE ?"
+    return query_to_json(query, (f"%{org_abbr}%",))
+
 if __name__ == '__main__':
     app.run(debug=True)
-    
+
