@@ -1,6 +1,6 @@
 from flask import Flask
 import sqlite3
-import pandas as pd
+import polars as pl
 import json
 import plotly
 import plotly.express as px
@@ -26,24 +26,42 @@ def search_awards():
 
 
 @app.route('/api/generatePlot')
-def bar_with_plotly():
-   # Students data available in a list of list
-    students = [['Akash', 34, 'Sydney', 'Australia'],
-                ['Rithika', 30, 'Coimbatore', 'India'],
-                ['Priya', 31, 'Coimbatore', 'India'],
-                ['Sandy', 32, 'Tokyo', 'Japan'],
-                ['Praneeth', 16, 'New York', 'US'],
-                ['Praveen', 17, 'Toronto', 'Canada']]
-     
+
+def bar_with_plotly():     
     # Convert list to dataframe and assign column values
-    df = pd.DataFrame(students,
-                      columns=['Name', 'Age', 'City', 'Country'],
-                      index=['a', 'b', 'c', 'd', 'e', 'f'])
-     
-    # Create Bar chart
-    fig = px.bar(df, x='Name', y='Age', color='City', barmode='group')
+    df = pl.DataFrame({"a":[1,2,3,4,5], "b":[1,4,9,16,25]})
+
+    fig = px.line(x=df["a"], y=df["b"])
      
     # Create graphJSON
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
      
-    return graphJSON
+    return f"""<!doctype html>
+<html>
+<style>
+*{{
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+}}
+body {{
+    background-color: #272b34;
+    font-family: 'Khula', sans-serif;
+    font-weight: 300;
+    color: white;
+    line-height: 1em;
+    margin: 0;
+  padding: 2em 1em;
+}}
+ 
+</style>
+ <body>
+  <div id='chart' class='chart'”></div>
+</body>
+ 
+<script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+<script type='text/javascript'>
+  var graphs = {graphJSON};
+  Plotly.plot('chart',graphs,{{}});
+</script>
+</html>"""
+
