@@ -5,7 +5,7 @@
   "scripts": {
     "flask-dev:unix": "cross-env FLASK_DEBUG=1 ./venv/bin/pip install -r requirements.txt && ./venv/bin/python -m flask --app api/index run -p 5328",
     "flask-dev:win": "cross-env FLASK_DEBUG=1 venv\\Scripts\\pip install -r requirements.txt && venv\\Scripts\\python -m flask --app api/index run -p 5328",
-    "flask-dev": "python -m pip install -r requirements.txt && python -m flask --app api/index run -p 5328",
+    "flask-dev": "run-s flask-dev:win || run-s flask-dev:unix",
     "next-dev": "next dev",
     "dev": "concurrently \"npm run next-dev\" \"npm run flask-dev\"",
     "build": "next build",
@@ -20,16 +20,7 @@
     "@radix-ui/react-select": "^2.1.1",
     "@radix-ui/react-slider": "^1.2.0",
     "@radix-ui/react-slot": "^1.1.0",
-    "@radix-ui/react-tabs": "^1.1.0",
-    "autoprefixer": "10.4.14",
-    "class-variance-authority": "^0.7.0",
-    "clsx": "^2.1.1",
-    "lucide-react": "^0.446.0",
-    "next": "14.2.13",
-    "react": "^18",
-    "react-dom": "^18",
-    "tailwind-merge": "^2.5.2",
-    "tailwindcss-animate": "^1.0.7"
+    "@radix-ui/react-tabs": "^1.1.0"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -42,6 +33,15 @@
     "npm-run-all": "^4.1.5",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "autoprefixer": "10.4.14",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.446.0",
+    "next": "14.2.13",
+    "react": "^18",
+    "react-dom": "^18",
+    "tailwind-merge": "^2.5.2",
+    "tailwindcss-animate": "^1.0.7"
   }
 }
