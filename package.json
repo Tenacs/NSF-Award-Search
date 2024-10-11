@@ -5,7 +5,7 @@
   "scripts": {
     "flask-dev:unix": "cross-env FLASK_DEBUG=1 ./venv/bin/pip install -r requirements.txt && ./venv/bin/python -m flask --app api/index run -p 5328",
     "flask-dev:win": "cross-env FLASK_DEBUG=1 venv\\Scripts\\pip install -r requirements.txt && venv\\Scripts\\python -m flask --app api/index run -p 5328",
-    "flask-dev": "run-s flask-dev:win || run-s flask-dev:unix",
+    "flask-dev": "python -m pip install -r requirements.txt && python -m flask --app api/index run -p 5328",
     "next-dev": "next dev",
     "dev": "concurrently \"npm run next-dev\" \"npm run flask-dev\"",
     "build": "next build",
