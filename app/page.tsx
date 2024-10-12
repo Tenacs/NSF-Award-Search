@@ -63,16 +63,7 @@ export default function SearchBar() {
       .then((res) => res.json())
       .then((awardData) => {
 
-        import('plotly.js-dist-min')
-        .then((Plotly) => {
-
-          Plotly.newPlot(
-            "plotDiv",
-            awardData[0],
-            { width: 600, height: 400 }
-          );
-          
-        });
+        
       })
 
     
