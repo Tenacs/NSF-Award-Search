@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
 import sqlite3
 import pandas as pd
+import git
+
 app = Flask(__name__)
 
 
@@ -49,6 +51,19 @@ def search_by_org_abbr():
     org_abbr = request.args.get('org_abbr')
     query = "SELECT * FROM awards WHERE org_abbr LIKE ?"
     return query_to_json(query, (f"%{org_abbr}%",))
+
+
+
+
+# Function to automatically push github updates to Pythonanywhere
+@app.route('/git_update', methods=['POST'])
+def git_update():
+    repo = git.Repo('../NSF-Award-Search')
+    repo.git.reset('--hard', 'origin/main')
+    repo.git.pull('origin', 'main')
+    return '', 200
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
