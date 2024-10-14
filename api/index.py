@@ -2,6 +2,15 @@ from flask import Flask, request, jsonify
 import sqlite3
 import pandas as pd
 import git
+import matplotlib.pyplot as plt
+from plottable import Table, ColumnDefinition
+import seaborn as sns
+import plotly.express as px
+import json
+import plotly
+
+
+
 
 app = Flask(__name__)
 
@@ -51,6 +60,39 @@ def search_by_org_abbr():
     org_abbr = request.args.get('org_abbr')
     query = "SELECT * FROM awards WHERE org_abbr LIKE ?"
     return query_to_json(query, (f"%{org_abbr}%",))
+
+
+
+
+
+# pandas and plotly example
+@app.route('/example', methods=['GET'])
+def pandas_example():
+
+    # test data
+    data = [
+        {"awardID": "1004589", "title": "Nonequilibrium Quantum Mechanics of Strongly Correlated Systems", "effectiveDate": "09/15/2010", "expDate": "08/31/2014", "amount": 285000.0, "instrument": "Continuing Grant", "programOfficer": "Daryl Hess", "institution": "New York University", "zipCode": "100121019", "state": "New York", "country": "United States", "org_abbr": "MPS", "org_name": "Direct For Mathematical & Physical Scien"},
+        {"awardID": "1005861", "title": "Nonequilibrium Materials Synthesis: Understanding and Controlling the Formation of Hierarchically Structured Microtubes", "effectiveDate": "09/15/2010", "expDate": "08/31/2015", "amount": 225000.0, "instrument": "Continuing Grant", "programOfficer": "Michael J. Scott", "institution": "Florida State University", "zipCode": "323060001", "state": "Florida", "country": "United States", "org_abbr": "MPS", "org_name": "Direct For Mathematical & Physical Scien"},
+        {"awardID": "1006605", "title": "Transport and Nonequilibrium Effects in Strongly Correlated Multilayer Nanostructure", "effectiveDate": "08/01/2010", "expDate": "07/31/2014", "amount": 630000.0, "instrument": "Continuing Grant", "programOfficer": "Andrey Dobrynin", "institution": "Georgetown University", "zipCode": "200570001", "state": "District of Columbia", "country": "United States", "org_abbr": "MPS", "org_name": "Direct For Mathematical & Physical Scien"}
+    ]
+    df = pd.DataFrame(data)
+
+    # Department by Year - Line Chart
+    df['effectiveYear'] = pd.to_datetime(df['effectiveDate']).dt.year
+    ptable = pd.pivot_table(df, values='amount', index='effectiveYear', columns='org_abbr', aggfunc='sum')
+    ptable = ptable.fillna(0).reset_index()
+
+    # Convert the pivot table to long format for plotly
+    ptable_long = pd.melt(ptable, id_vars=['effectiveYear'], value_vars=ptable.columns[1:], var_name='Department', value_name='AwardTotal')
+
+    # Create the plotly figure
+    fig = px.line(ptable_long, x='effectiveYear', y='AwardTotal', color='Department', title='Department by Year')
+
+    # Convert the plotly figure to JSON
+    graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    return graphJSON
+
+
 
 
 

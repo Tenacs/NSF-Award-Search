@@ -13,8 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useRouter } from 'next/navigation'
 
 export default function SearchBar() {
-  const [activeTab, setActiveTab] = useState('award')
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState('award')
+  const [isPlotlyLoaded, setIsPlotlyLoaded] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState({
     award: '',
@@ -46,10 +47,35 @@ export default function SearchBar() {
   }, [searchQuery.endYear])
 
 
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.plot.ly/plotly-latest.min.js';
+    script.onload = () => {
+      setIsPlotlyLoaded(true);
+    };
+    document.body.appendChild(script);
+  }, []);
+
+  
+  useEffect(() => {
+    if (isPlotlyLoaded) {
+      
+      fetch('/api/example')
+      .then((res) => res.json())
+      .then((awardData) => {
+      // @ts-ignore
+      Plotly.plot('plotDiv',awardData,{});
+
+    });
+    }
+  }, [isPlotlyLoaded]);
+
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    router.push("/api/awards")
+    router.push("/api/search_award_title")
   }
+
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
@@ -239,6 +265,7 @@ export default function SearchBar() {
           </TabsContent>
         </Tabs>
       </div>
+      <div id="plotDiv"></div>
     </main>
   )
 
