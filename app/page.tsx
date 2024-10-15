@@ -15,7 +15,6 @@ import { useRouter } from 'next/navigation'
 export default function SearchBar() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('award')
-  const [isPlotlyLoaded, setIsPlotlyLoaded] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState({
     award: '',
@@ -34,6 +33,7 @@ export default function SearchBar() {
   })
 
 
+  // function to validate startYear and endYear sliders
   useEffect(() => {
     if (searchQuery.startYear > searchQuery.endYear) {
       setSearchQuery((prev) => ({...prev, startYear: searchQuery.endYear}))
@@ -47,33 +47,10 @@ export default function SearchBar() {
   }, [searchQuery.endYear])
 
 
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.plot.ly/plotly-latest.min.js';
-    script.onload = () => {
-      setIsPlotlyLoaded(true);
-    };
-    document.body.appendChild(script);
-  }, []);
-
-  
-  useEffect(() => {
-    if (isPlotlyLoaded) {
-      
-      fetch('/api/example')
-      .then((res) => res.json())
-      .then((awardData) => {
-      // @ts-ignore
-      Plotly.plot('plotDiv',awardData,{});
-
-    });
-    }
-  }, [isPlotlyLoaded]);
-
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    router.push("/api/search_award_title")
+    router.push("/results")
   }
 
 
@@ -133,88 +110,28 @@ export default function SearchBar() {
                     <SelectValue placeholder="Select a program" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[200px] overflow-y-auto">
-                    <SelectItem value="none">Select one</SelectItem>
-                    <SelectItem value="06020000">AGS - Div Atmospheric & Geospace Sciences</SelectItem>
-                    <SelectItem value="14030000">ANT - Antarctic Sciences Division</SelectItem>
-                    <SelectItem value="14010000">ARC - Arctic Sciences Division</SelectItem>
-                    <SelectItem value="03020000">AST - Division Of Astronomical Sciences</SelectItem>
-                    <SelectItem value="04040000">BCS - Division Of Behavioral and Cognitive Sci</SelectItem>
-                    <SelectItem value="10000000">BFA - Office of Budget, Finance, & Award Management</SelectItem>
-                    <SelectItem value="08000000">BIO - Direct For Biological Sciences</SelectItem>
-                    <SelectItem value="07020000">CBET - Div Of Chem, Bioeng, Env, & Transp Sys</SelectItem>
-                    <SelectItem value="05010000">CCF - Division of Computing and Communication Foundations</SelectItem>
-                    <SelectItem value="03090000">CHE - Division Of Chemistry</SelectItem>
-                    <SelectItem value="07030000">CMMI - Div Of Civil, Mechanical, & Manufact Inn</SelectItem>
-                    <SelectItem value="05050000">CNS - Division Of Computer and Network Systems</SelectItem>
-                    <SelectItem value="05000000">CSE - Direct For Computer & Info Scie & Enginr</SelectItem>
-                    <SelectItem value="10040000">DACS - Division of Acquisition & Cooperative Support</SelectItem>
-                    <SelectItem value="02060000">DAS - Division Of Administrative Services</SelectItem>
-                    <SelectItem value="08080000">DBI - Div Of Biological Infrastructure</SelectItem>
-                    <SelectItem value="16010000">DDAI - Div of Data and Artificial Intelligence</SelectItem>
-                    <SelectItem value="08010000">DEB - Division Of Environmental Biology</SelectItem>
-                    <SelectItem value="16020000">DES - Division of Enterprise Services</SelectItem>
-                    <SelectItem value="10020000">DFM - Division of Financial Management</SelectItem>
-                    <SelectItem value="10030000">DGA - Division of Grants and Agreements</SelectItem>
-                    <SelectItem value="11010000">DGE - Division Of Graduate Education</SelectItem>
-                    <SelectItem value="10050000">DIAS - Division of Institution & Award Support</SelectItem>
-                    <SelectItem value="02090000">DIS - Division Of Information Systems</SelectItem>
-                    <SelectItem value="03070000">DMR - Division Of Materials Research</SelectItem>
-                    <SelectItem value="03040000">DMS - Division Of Mathematical Sciences</SelectItem>
-                    <SelectItem value="10010000">DOB - Budget Division</SelectItem>
-                    <SelectItem value="11090000">DRL - Division Of Research On Learning</SelectItem>
-                    <SelectItem value="16030000">DSO - Division of Security & Operations</SelectItem>
-                    <SelectItem value="11040000">DUE - Division Of Undergraduate Education</SelectItem>
-                    <SelectItem value="06030000">EAR - Division Of Earth Sciences</SelectItem>
-                    <SelectItem value="07010000">ECCS - Div Of Electrical, Commun & Cyber Sys</SelectItem>
-                    <SelectItem value="11000000">EDU - Directorate for STEM Education</SelectItem>
-                    <SelectItem value="07050000">EEC - Div Of Engineering Education and Centers</SelectItem>
-                    <SelectItem value="11060000">EES - Div. of Equity for Excellence in STEM</SelectItem>
-                    <SelectItem value="08040000">EF - Emerging Frontiers</SelectItem>
-                    <SelectItem value="07040000">EFMA - Emerging Frontiers & Multidisciplinary Activities</SelectItem>
-                    <SelectItem value="07000000">ENG - Directorate For Engineering</SelectItem>
-                    <SelectItem value="06000000">GEO - Directorate For Geosciences</SelectItem>
-                    <SelectItem value="02040000">HRM - Division Of Human Resource Management</SelectItem>
-                    <SelectItem value="07070000">IIP - Div Of Industrial Innovation & Partnersh</SelectItem>
-                    <SelectItem value="05020000">IIS - Div Of Information & Intelligent Systems</SelectItem>
-                    <SelectItem value="08090000">IOS - Division Of Integrative Organismal Systems</SelectItem>
-                    <SelectItem value="02000000">IRM - Office Of Information & Resource Mgmt</SelectItem>
-                    <SelectItem value="15020000">ITE - Innovation and Technology Ecosystems</SelectItem>
-                    <SelectItem value="05100000">ITR - CISE Information Technology Research</SelectItem>
-                    <SelectItem value="01050000">LPA - Office Of Legislative & Public Affairs</SelectItem>
-                    <SelectItem value="08070000">MCB - Div Of Molecular and Cellular Bioscience</SelectItem>
-                    <SelectItem value="03000000">MPS - Direct For Mathematical & Physical Scien</SelectItem>
-                    <SelectItem value="12000000">NCO - National Coordination Office</SelectItem>
-                    <SelectItem value="04030000">NCSE - National Center For S&E Statistics</SelectItem>
-                    <SelectItem value="13000000">NNCO - Natl Nanotechnology Coordinating Office</SelectItem>
-                    <SelectItem value="00010000">NSB - National Science Board</SelectItem>
-                    <SelectItem value="01000000">O/D - Office Of The Director</SelectItem>
-                    <SelectItem value="05090000">OAC - Office of Advanced Cyberinfrastructure (OAC)</SelectItem>
-                    <SelectItem value="06040000">OCE - Division Of Ocean Sciences</SelectItem>
-                    <SelectItem value="01110000">OCI - Office Of Cyberinfrastructure</SelectItem>
-                    <SelectItem value="16000000">OCIO - Office of the Chief Information Officer</SelectItem>
-                    <SelectItem value="01070000">OECR - OECR-Office of Equity & Civil Rights</SelectItem>
-                    <SelectItem value="01010000">OGC - General Counsel</SelectItem>
-                    <SelectItem value="01060000">OIA - OIA-Office of Integrative Activities</SelectItem>
-                    <SelectItem value="00020000">OIG - Office Of Inspector General</SelectItem>
-                    <SelectItem value="01090000">OISE - Office Of Internatl Science &Engineering</SelectItem>
-                    <SelectItem value="14000000">OPP - Office Of Polar Programs</SelectItem>
-                    <SelectItem value="06090000">OPP - Office of Polar Programs (OPP)</SelectItem>
-                    <SelectItem value="03060000">OSI - Office of Strategic Initiatives (OSI)</SelectItem>
-                    <SelectItem value="14040000">PEHS - Polar Environment,Health & Safety Office</SelectItem>
-                    <SelectItem value="03010000">PHY - Division Of Physics</SelectItem>
-                    <SelectItem value="99990000">PYRL - NSF Payroll Organization</SelectItem>
-                    <SelectItem value="10060000">RIO - Research Infrastructure Office</SelectItem>
-                    <SelectItem value="06010000">RISE - Div of Res, Innovation, Synergies, & Edu</SelectItem>
-                    <SelectItem value="04000000">SBE - Direct For Social, Behav & Economic Scie</SelectItem>
-                    <SelectItem value="04050000">SES - Divn Of Social and Economic Sciences</SelectItem>
-                    <SelectItem value="04010000">SMA - SBE Off Of Multidisciplinary Activities</SelectItem>
-                    <SelectItem value="15040000">SPH - Strategic Partnerships Hub</SelectItem>
-                    <SelectItem value="15010000">TF - Technology Frontiers</SelectItem>
-                    <SelectItem value="15030000">TI - Translational Impacts</SelectItem>
-                    <SelectItem value="15000000">TIP - Dir for Tech, Innovation, & Partnerships</SelectItem>
+                  <SelectItem value="ENG-Directorate For Engineering">ENG - Directorate For Engineering</SelectItem>
+                  <SelectItem value="CSE-Direct For Computer & Info Scie & Enginr">CSE - Direct For Computer & Info Scie & Engineering</SelectItem>
+                  <SelectItem value="MPS-Direct For Mathematical & Physical Scien">MPS - Direct For Mathematical & Physical Science</SelectItem>
+                  <SelectItem value="EDU-Directorate for STEM Education">EDU - Directorate for STEM Education</SelectItem>
+                  <SelectItem value="GEO-Directorate For Geosciences">GEO - Directorate For Geosciences</SelectItem>
+                  <SelectItem value="SBE-Direct For Social, Behav & Economic Scie">SBE - Direct For Social, Behavioral & Economic Science</SelectItem>
+                  <SelectItem value="O/D-Office Of The Director">O/D - Office Of The Director</SelectItem>
+                  <SelectItem value="TIP-Dir for Tech, Innovation, & Partnerships">TIP - Dir for Tech, Innovation, & Partnerships</SelectItem>
+                  <SelectItem value="BIO-Direct For Biological Sciences">BIO - Direct For Biological Sciences</SelectItem>
+                  <SelectItem value="EHR-Direct For Education and Human Resources">EHR - Direct For Education and Human Resources</SelectItem>
+                  <SelectItem value="BFA-Office of Budget, Finance, & Award Management">BFA - Office of Budget, Finance, & Award Management</SelectItem>
+                  <SelectItem value="IRM-Office Of Information & Resource Mgmt">IRM - Office Of Information & Resource Mgmt</SelectItem>
+                  <SelectItem value="OPP-Office Of Polar Programs">OPP - Office Of Polar Programs</SelectItem>
+                  <SelectItem value="NCO-National Coordination Office">NCO - National Coordination Office</SelectItem>
+                  <SelectItem value="NNCO-Natl Nanotechnology Coordinating Office">NNCO - Natl Nanotechnology Coordinating Office</SelectItem>
+                  <SelectItem value="OCIO-Office of the Chief Information Officer">OCIO - Office of the Chief Information Officer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+
+
               <div>
                 <Label htmlFor="programOfficer">Program Officer</Label>
                 <Input
@@ -283,56 +200,61 @@ export default function SearchBar() {
                     <SelectValue placeholder="Select a state" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[200px] overflow-y-auto">
-                    <SelectItem value="AL">Alabama</SelectItem>
-                    <SelectItem value="AK">Alaska</SelectItem>
-                    <SelectItem value="AZ">Arizona</SelectItem>
-                    <SelectItem value="AR">Arkansas</SelectItem>
-                    <SelectItem value="CA">California</SelectItem>
-                    <SelectItem value="CO">Colorado</SelectItem>
-                    <SelectItem value="CT">Connecticut</SelectItem>
-                    <SelectItem value="DE">Delaware</SelectItem>
-                    <SelectItem value="FL">Florida</SelectItem>
-                    <SelectItem value="GA">Georgia</SelectItem>
-                    <SelectItem value="HI">Hawaii</SelectItem>
-                    <SelectItem value="ID">Idaho</SelectItem>
-                    <SelectItem value="IL">Illinois</SelectItem>
-                    <SelectItem value="IN">Indiana</SelectItem>
-                    <SelectItem value="IA">Iowa</SelectItem>
-                    <SelectItem value="KS">Kansas</SelectItem>
-                    <SelectItem value="KY">Kentucky</SelectItem>
-                    <SelectItem value="LA">Louisiana</SelectItem>
-                    <SelectItem value="ME">Maine</SelectItem>
-                    <SelectItem value="MD">Maryland</SelectItem>
-                    <SelectItem value="MA">Massachusetts</SelectItem>
-                    <SelectItem value="MI">Michigan</SelectItem>
-                    <SelectItem value="MN">Minnesota</SelectItem>
-                    <SelectItem value="MS">Mississippi</SelectItem>
-                    <SelectItem value="MO">Missouri</SelectItem>
-                    <SelectItem value="MT">Montana</SelectItem>
-                    <SelectItem value="NE">Nebraska</SelectItem>
-                    <SelectItem value="NV">Nevada</SelectItem>
-                    <SelectItem value="NH">New Hampshire</SelectItem>
-                    <SelectItem value="NJ">New Jersey</SelectItem>
-                    <SelectItem value="NM">New Mexico</SelectItem>
-                    <SelectItem value="NY">New York</SelectItem>
-                    <SelectItem value="NC">North Carolina</SelectItem>
-                    <SelectItem value="ND">North Dakota</SelectItem>
-                    <SelectItem value="OH">Ohio</SelectItem>
-                    <SelectItem value="OK">Oklahoma</SelectItem>
-                    <SelectItem value="OR">Oregon</SelectItem>
-                    <SelectItem value="PA">Pennsylvania</SelectItem>
-                    <SelectItem value="RI">Rhode Island</SelectItem>
-                    <SelectItem value="SC">South Carolina</SelectItem>
-                    <SelectItem value="SD">South Dakota</SelectItem>
-                    <SelectItem value="TN">Tennessee</SelectItem>
-                    <SelectItem value="TX">Texas</SelectItem>
-                    <SelectItem value="UT">Utah</SelectItem>
-                    <SelectItem value="VT">Vermont</SelectItem>
-                    <SelectItem value="VA">Virginia</SelectItem>
-                    <SelectItem value="WA">Washington</SelectItem>
-                    <SelectItem value="WV">West Virginia</SelectItem>
-                    <SelectItem value="WI">Wisconsin</SelectItem>
-                    <SelectItem value="WY">Wyoming</SelectItem>
+                  <SelectItem value="Alabama">Alabama</SelectItem>
+                  <SelectItem value="Alaska">Alaska</SelectItem>
+                  <SelectItem value="American Samoa">American Samoa</SelectItem>
+                  <SelectItem value="Arizona">Arizona</SelectItem>
+                  <SelectItem value="Arkansas">Arkansas</SelectItem>
+                  <SelectItem value="California">California</SelectItem>
+                  <SelectItem value="Colorado">Colorado</SelectItem>
+                  <SelectItem value="Connecticut">Connecticut</SelectItem>
+                  <SelectItem value="Delaware">Delaware</SelectItem>
+                  <SelectItem value="District of Columbia">District of Columbia</SelectItem>
+                  <SelectItem value="Florida">Florida</SelectItem>
+                  <SelectItem value="Georgia">Georgia</SelectItem>
+                  <SelectItem value="Hawaii">Hawaii</SelectItem>
+                  <SelectItem value="Idaho">Idaho</SelectItem>
+                  <SelectItem value="Illinois">Illinois</SelectItem>
+                  <SelectItem value="Indiana">Indiana</SelectItem>
+                  <SelectItem value="Iowa">Iowa</SelectItem>
+                  <SelectItem value="Kansas">Kansas</SelectItem>
+                  <SelectItem value="Kentucky">Kentucky</SelectItem>
+                  <SelectItem value="Louisiana">Louisiana</SelectItem>
+                  <SelectItem value="Maine">Maine</SelectItem>
+                  <SelectItem value="Maryland">Maryland</SelectItem>
+                  <SelectItem value="Massachusetts">Massachusetts</SelectItem>
+                  <SelectItem value="Michigan">Michigan</SelectItem>
+                  <SelectItem value="Minnesota">Minnesota</SelectItem>
+                  <SelectItem value="Mississippi">Mississippi</SelectItem>
+                  <SelectItem value="Missouri">Missouri</SelectItem>
+                  <SelectItem value="Montana">Montana</SelectItem>
+                  <SelectItem value="Nebraska">Nebraska</SelectItem>
+                  <SelectItem value="Nevada">Nevada</SelectItem>
+                  <SelectItem value="New Hampshire">New Hampshire</SelectItem>
+                  <SelectItem value="New Jersey">New Jersey</SelectItem>
+                  <SelectItem value="New Mexico">New Mexico</SelectItem>
+                  <SelectItem value="New York">New York</SelectItem>
+                  <SelectItem value="North Carolina">North Carolina</SelectItem>
+                  <SelectItem value="North Dakota">North Dakota</SelectItem>
+                  <SelectItem value="Ohio">Ohio</SelectItem>
+                  <SelectItem value="Oklahoma">Oklahoma</SelectItem>
+                  <SelectItem value="Oregon">Oregon</SelectItem>
+                  <SelectItem value="Palau">Palau</SelectItem>
+                  <SelectItem value="Pennsylvania">Pennsylvania</SelectItem>
+                  <SelectItem value="Puerto Rico">Puerto Rico</SelectItem>
+                  <SelectItem value="Rhode Island">Rhode Island</SelectItem>
+                  <SelectItem value="South Carolina">South Carolina</SelectItem>
+                  <SelectItem value="South Dakota">South Dakota</SelectItem>
+                  <SelectItem value="Tennessee">Tennessee</SelectItem>
+                  <SelectItem value="Texas">Texas</SelectItem>
+                  <SelectItem value="Utah">Utah</SelectItem>
+                  <SelectItem value="Vermont">Vermont</SelectItem>
+                  <SelectItem value="Virgin Islands">Virgin Islands</SelectItem>
+                  <SelectItem value="Virginia">Virginia</SelectItem>
+                  <SelectItem value="Washington">Washington</SelectItem>
+                  <SelectItem value="West Virginia">West Virginia</SelectItem>
+                  <SelectItem value="Wisconsin">Wisconsin</SelectItem>
+                  <SelectItem value="Wyoming">Wyoming</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -362,7 +284,46 @@ export default function SearchBar() {
                     <SelectItem value="CN">China</SelectItem>
                     <SelectItem value="IN">India</SelectItem>
                     <SelectItem value="BR">Brazil</SelectItem>
-                    {/* Add more countries as needed */}
+                    <SelectItem value="VE">Venezuela</SelectItem>
+                    <SelectItem value="BM">Bermuda</SelectItem>
+                    <SelectItem value="PY">Paraguay</SelectItem>
+                    <SelectItem value="CH">Switzerland</SelectItem>
+                    <SelectItem value="ZA">South Africa</SelectItem>
+                    <SelectItem value="UY">Uruguay</SelectItem>
+                    <SelectItem value="SE">Sweden</SelectItem>
+                    <SelectItem value="ID">Indonesia</SelectItem>
+                    <SelectItem value="TR">Turkey</SelectItem>
+                    <SelectItem value="ES">Spain</SelectItem>
+                    <SelectItem value="FM">Micronesia</SelectItem>
+                    <SelectItem value="AR">Argentina</SelectItem>
+                    <SelectItem value="PL">Poland</SelectItem>
+                    <SelectItem value="TW">Taiwan</SelectItem>
+                    <SelectItem value="PR">Puerto Rico</SelectItem>
+                    <SelectItem value="BG">Bulgaria</SelectItem>
+                    <SelectItem value="PE">Peru</SelectItem>
+                    <SelectItem value="CL">Chile</SelectItem>
+                    <SelectItem value="TH">Thailand</SelectItem>
+                    <SelectItem value="MA">Morocco</SelectItem>
+                    <SelectItem value="MY">Malaysia</SelectItem>
+                    <SelectItem value="HK">Hong Kong</SelectItem>
+                    <SelectItem value="BE">Belgium</SelectItem>
+                    <SelectItem value="CR">Costa Rica</SelectItem>
+                    <SelectItem value="AU">Australia</SelectItem>
+                    <SelectItem value="NL">Netherlands</SelectItem>
+                    <SelectItem value="CO">Colombia</SelectItem>
+                    <SelectItem value="PK">Pakistan</SelectItem>
+                    <SelectItem value="GL">Greenland</SelectItem>
+                    <SelectItem value="VI">Virgin Islands, U.S.</SelectItem>
+                    <SelectItem value="IE">Ireland</SelectItem>
+                    <SelectItem value="PA">Panama</SelectItem>
+                    <SelectItem value="NZ">New Zealand</SelectItem>
+                    <SelectItem value="PF">French Polynesia</SelectItem>
+                    <SelectItem value="AQ">Antarctica</SelectItem>
+                    <SelectItem value="GR">Greece</SelectItem>
+                    <SelectItem value="ZM">Zambia</SelectItem>
+                    <SelectItem value="TZ">Tanzania</SelectItem>
+                    <SelectItem value="AF">Afghanistan</SelectItem>
+                    <SelectItem value="KE">Kenya</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

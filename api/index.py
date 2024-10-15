@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request
 import sqlite3
 import pandas as pd
 import git
@@ -30,35 +30,35 @@ def query_to_json(query, params=()):
 @app.route('/search_award_title', methods=['GET'])
 def search_by_award_title():
     title = request.args.get('title')
-    query = "SELECT * FROM awards WHERE title LIKE ?"
+    query = "SELECT * FROM awards WHERE title LIKE ? LIMIT 3000"
     return query_to_json(query, (f"%{title}%",))
 
 # Search by Award ID
 @app.route('/search_award_id', methods=['GET'])
 def search_by_award_id():
     award_id = request.args.get('award_id')
-    query = "SELECT * FROM awards WHERE awardID = ?"
+    query = "SELECT * FROM awards WHERE awardID = ? LIMIT 3000"
     return query_to_json(query, (award_id,))
 
 # Search by Organization/University
 @app.route('/search_institution', methods=['GET'])
 def search_by_institution():
     institution_name = request.args.get('institution')
-    query = "SELECT * FROM awards WHERE institution LIKE ?"
+    query = "SELECT * FROM awards WHERE institution LIKE ? LIMIT 3000"
     return query_to_json(query, (f"%{institution_name}%",))
 
 # Search by Investigator Name
 @app.route('/search_name', methods=['GET'])
 def search_by_name():
     investigator_name = request.args.get('name')
-    query = "SELECT * FROM investigators WHERE name LIKE ?"
+    query = "SELECT * FROM investigators WHERE name LIKE ? LIMIT 3000"
     return query_to_json(query, (f"%{investigator_name}%",))
 
 #Search by Organization Abbreviation
 @app.route('/search_org_abbr', methods=['GET'])
 def search_by_org_abbr():
     org_abbr = request.args.get('org_abbr')
-    query = "SELECT * FROM awards WHERE org_abbr LIKE ?"
+    query = "SELECT * FROM awards WHERE org_abbr LIKE ? LIMIT 3000"
     return query_to_json(query, (f"%{org_abbr}%",))
 
 
@@ -101,6 +101,7 @@ def pandas_example():
 @app.route('/git_update', methods=['POST'])
 def git_update():
     repo = git.Repo('../NSF-Award-Search')
+    repo.git.fetch()
     repo.git.reset('--hard', 'origin/main')
     repo.git.pull('origin', 'main')
     return '', 200
