@@ -35,9 +35,9 @@ export default function SearchResults() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [isPlotlyScriptLoaded, setIsPlotlyScriptLoaded] = useState(false);
   const [isGraphLoading, setIsGraphLoading] = useState(false);
-  const [isLoading, setIsLoading] = useState(false)
   const [modalIsOpen, setModalIsOpen] = useState(false)
   const [activeChartTab, setActiveChartTab] = useState('Chart1')
+  const [message, setMessage] = useState('')
 
   // import Plotly script for visualization
   useEffect(() => {
@@ -71,21 +71,23 @@ export default function SearchResults() {
 
   // Function to handle search button click
   const handleSearch = () => {
+    
+    setMessage('')
 
     if (searchQuery.trim() === '') {
-      alert('Please enter award title')
+      setMessage('Please enter award title')
       return
     }
 
-    setIsLoading(true);
+    setMessage("Loading...")
     fetch(`/api/search_award_title?title=${searchQuery}`)
     .then((res) => res.json())
     .then((awardData) => {
-      setIsLoading(false)
+      awardData.length === 0 ? setMessage('Your search did not return any results.') : setMessage('')
       setResults(awardData)
     })
     .catch((error) => {
-      setIsLoading(false)
+      setMessage('An error occurred while fetching data. Please check console for more details.')
       console.error('Error:', error)
     })
 
@@ -174,7 +176,7 @@ export default function SearchResults() {
         {/* Export and sort controls */}
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center space-x-2">
-            <span className="text-sm">Export up to 3,000 Awards:</span>
+            <span className="text-sm">Export Results:</span>
             <Button variant="outline" size="sm" onClick={() => {}}>CSV</Button>
             <Button variant="outline" size="sm" onClick={() => {}}>XML</Button>
           </div>
@@ -241,9 +243,9 @@ export default function SearchResults() {
         {/* Results */}
         <div className="flex-1 overflow-y-auto border rounded-lg bg-white">
 
-          {isLoading && <div className="p-4 text-center">Loading...</div>}
+          {message && <div className="p-4 text-center">{message}</div>}
 
-          {results.map((result, index) => (
+          {message.length == 0 && results.map((result, index) => (
             <div key={index} className={`p-4 ${index !== results.length - 1 ? 'border-b' : ''}`}>
               <a href={`https://www.nsf.gov/awardsearch/showAward?AWD_ID=${result.awardID}`} target="_blank" className="text-blue-600 hover:underline text-lg">
                 {result.title}
