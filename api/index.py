@@ -51,7 +51,7 @@ def search_by_institution():
 @app.route('/search_name', methods=['GET'])
 def search_by_name():
     investigator_name = request.args.get('name')
-    query = "SELECT * FROM investigators WHERE name LIKE ? LIMIT 3000"
+    query = "SELECT * FROM awards WHERE awardID in (SELECT awardID FROM investigators WHERE name LIKE ? LIMIT 3000)"
     return query_to_json(query, (f"%{investigator_name}%",))
 
 #Search by Organization Abbreviation
