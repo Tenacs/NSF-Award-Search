@@ -182,7 +182,6 @@ export default function SearchBar() {
           </TabsContent>
         </Tabs>
       </div>
-      <div id="plotDiv"></div>
     </main>
   )
 

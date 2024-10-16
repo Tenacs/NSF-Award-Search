@@ -5,6 +5,9 @@ import { Search, ChevronRight, Home} from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {Root, Trigger, Portal, Overlay, Content, Title, Description, Close} from "@radix-ui/react-dialog";
+import { Cross2Icon } from "@radix-ui/react-icons";
 import { useRouter } from 'next/navigation'
 
 interface Result {
@@ -30,32 +33,40 @@ export default function SearchResults() {
   const [results, setResults] = useState<Result[]>([])
   const [sortBy, setSortBy] = useState('relevance')
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  const [isPlotlyLoaded, setIsPlotlyLoaded] = useState(false);
+  const [isPlotlyScriptLoaded, setIsPlotlyScriptLoaded] = useState(false);
+  const [isGraphLoading, setIsGraphLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(false)
-
+  const [modalIsOpen, setModalIsOpen] = useState(false)
+  const [activeChartTab, setActiveChartTab] = useState('Chart1')
 
   // import Plotly script for visualization
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://cdn.plot.ly/plotly-latest.min.js';
     script.onload = () => {
-      setIsPlotlyLoaded(true);
+      setIsPlotlyScriptLoaded(true);
     };
     document.body.appendChild(script);
   }, []);
 
 
-  // Plot results using Plotly - need to create a div with id='plotDiv' to display the plot
+  // Plot results using Plotly
   useEffect(() => {
-    if (isPlotlyLoaded) {
-
-      if (results.length > 0) {
-      // @ts-ignore
-      //Plotly.plot('plotDiv',results,{});
-      }
-      
+    if (isPlotlyScriptLoaded && modalIsOpen) {
+      setIsGraphLoading(true);
+      fetch('/api/example')
+      .then((res) => res.json())
+      .then((awardData) => {
+        // @ts-ignore
+        Plotly.newPlot(`plotDiv${activeChartTab.slice(-1)}`,awardData,{});
+        setIsGraphLoading(false);
+      })
+      .catch((error) => {
+        setIsGraphLoading(false);
+        console.error('Error:', error);
+      });
     }
-  }, [isPlotlyLoaded]);
+  }, [isPlotlyScriptLoaded, modalIsOpen, activeChartTab]);
 
 
   // Function to handle search button click
@@ -72,6 +83,10 @@ export default function SearchResults() {
     .then((awardData) => {
       setIsLoading(false)
       setResults(awardData)
+    })
+    .catch((error) => {
+      setIsLoading(false)
+      console.error('Error:', error)
     })
 
     console.log('Searching for:', searchQuery)
@@ -164,6 +179,51 @@ export default function SearchResults() {
             <Button variant="outline" size="sm" onClick={() => {}}>XML</Button>
           </div>
           <div className="flex items-center space-x-2">
+
+            {/*Pop up dialog for data visualization*/}
+            <Root open={modalIsOpen} onOpenChange={setModalIsOpen}>
+              <Trigger asChild>
+                <Button className="mr-4" variant="outline" size="default">Data Visualization</Button>
+              </Trigger>
+              <Portal>
+                <Overlay className="fixed inset-0 bg-black bg-opacity-50" />
+                <Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg">
+
+                  <Title className="text-lg font-semibold">Results Breakdown</Title>
+                  <Description className="mt-2 mb-4 text-sm text-gray-500">
+                    Summary stats for your search results
+                  </Description>
+
+                  <Tabs value={activeChartTab} onValueChange={setActiveChartTab} style={{"height": "550px", "width": "900px"}}>
+                    <TabsList className="grid w-full grid-cols-4 mt-1">
+                      <TabsTrigger value="Chart1">Chart 1</TabsTrigger>
+                      <TabsTrigger value="Chart2">Chart 2</TabsTrigger>
+                      <TabsTrigger value="Chart3">Chart 3</TabsTrigger>
+                      <TabsTrigger value="Chart4">Chart 4</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="Chart1" className="flex justify-center">
+                      <div id="plotDiv1" style={{"height": "500px", "width": "800px"}}>{isGraphLoading && <b>Loading...</b>}</div>
+                    </TabsContent>
+                    <TabsContent value="Chart2" className="flex justify-center">
+                      <div id="plotDiv2" style={{"height": "500px", "width": "800px"}} >{isGraphLoading && <b>Loading...</b>}</div>
+                    </TabsContent>
+                    <TabsContent value="Chart3" className="flex justify-center">
+                      <div id="plotDiv3" style={{"height": "500px", "width": "800px"}} >{isGraphLoading && <b>Loading...</b>}</div>
+                    </TabsContent>
+                    <TabsContent value="Chart4" className="flex justify-center">
+                      <div id="plotDiv4" style={{"height": "500px", "width": "800px"}} >{isGraphLoading && <b>Loading...</b>}</div>
+                    </TabsContent>
+                  </Tabs>
+                  
+                  <Close asChild>
+                    <button className="absolute top-3 right-3 text-gray-400 hover:text-gray-500">
+                      <Cross2Icon />
+                    </button>
+                  </Close>
+                </Content>
+              </Portal>
+            </Root>
+
             <span className="text-sm">Sort By:</span>
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-[180px]">
@@ -180,7 +240,9 @@ export default function SearchResults() {
 
         {/* Results */}
         <div className="flex-1 overflow-y-auto border rounded-lg bg-white">
+
           {isLoading && <div className="p-4 text-center">Loading...</div>}
+
           {results.map((result, index) => (
             <div key={index} className={`p-4 ${index !== results.length - 1 ? 'border-b' : ''}`}>
               <a href={`https://www.nsf.gov/awardsearch/showAward?AWD_ID=${result.awardID}`} target="_blank" className="text-blue-600 hover:underline text-lg">
