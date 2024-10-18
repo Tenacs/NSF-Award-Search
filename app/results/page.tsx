@@ -1,16 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, ChevronRight, Home} from 'lucide-react'
+import { Search} from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {Root, Trigger, Portal, Overlay, Content, Title, Description, Close} from "@radix-ui/react-dialog";
 import { Cross2Icon } from "@radix-ui/react-icons";
-import { useRouter } from 'next/navigation'
+import Sidebar from './Sidebar'
 
-interface Result {
+
+interface Award {
   awardID?: string;
   title?: string;
   awardNumber?: string;
@@ -25,62 +26,79 @@ interface Result {
   country?: string;
   org_abbr?: string;
   org_name?: string;
+  primary_investigators?: string
+  co_primary_investigators?: string
+  programElementCodes?: string
+  programReferenceCodes?: string
 }
 
 export default function SearchResults() {
-  const router = useRouter();
+
   const [searchQuery, setSearchQuery] = useState('')
-  const [results, setResults] = useState<Result[]>([])
+  const [results, setResults] = useState<Award[]>([])
   const [sortBy, setSortBy] = useState('relevance')
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [isPlotlyScriptLoaded, setIsPlotlyScriptLoaded] = useState(false);
   const [isGraphLoading, setIsGraphLoading] = useState(false);
   const [modalIsOpen, setModalIsOpen] = useState(false)
   const [activeChartTab, setActiveChartTab] = useState('Chart1')
+  const [plotlyData, setPlotlyData] = useState<{ [key: string]: any }>({})
   const [message, setMessage] = useState('')
 
-  // import Plotly script for visualization
+  // Load Plotly script
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://cdn.plot.ly/plotly-latest.min.js';
-    script.onload = () => {
-      setIsPlotlyScriptLoaded(true);
-    };
+    script.onload = () => setIsPlotlyScriptLoaded(true);
     document.body.appendChild(script);
   }, []);
 
 
-  // Plot results using Plotly
+  // Fetch plot data whenever results change
   useEffect(() => {
-    if (isPlotlyScriptLoaded && modalIsOpen) {
+    if (results.length === 0) return;
+    getPlotlyChart('bar', results, "Chart1");
+    getPlotlyChart('line', results, "Chart2");
+    getPlotlyChart('bar', results, "Chart3");
+    getPlotlyChart('', results, "Chart4");
+  }, [results]);
+
+
+  function getPlotlyChart(type: string, data: Award[], tabs: string) {
+    
+    fetch('/api/example', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({"type": type, "results": data}),
+    })
+    .then((res) => res.json())
+    .then((data) => setPlotlyData((prev) => ({ ...prev, [tabs]: data })))
+    .catch((err) => console.error('Error loading Plotly data:', err));
+  }
+
+
+  useEffect(() => {
+    if (isPlotlyScriptLoaded && modalIsOpen && plotlyData[activeChartTab] != null) {
       setIsGraphLoading(true);
-      fetch('/api/example')
-      .then((res) => res.json())
-      .then((awardData) => {
+      // @ts-ignore
+      setTimeout(() => {
         // @ts-ignore
-        Plotly.newPlot(`plotDiv${activeChartTab.slice(-1)}`,awardData,{});
-        setIsGraphLoading(false);
-      })
-      .catch((error) => {
-        setIsGraphLoading(false);
-        console.error('Error:', error);
-      });
+        Plotly.newPlot(`plotDiv${activeChartTab.slice(-1)}`, plotlyData[activeChartTab], {}).then((a) => {console.log(a); setIsGraphLoading(false)});
+      }, 0);
+        
     }
-  }, [isPlotlyScriptLoaded, modalIsOpen, activeChartTab]);
+  }, [isPlotlyScriptLoaded, modalIsOpen, activeChartTab, plotlyData]);
 
 
   // Function to handle search button click
   const handleSearch = () => {
-    
-    setMessage('')
-
+    setResults([])
     if (searchQuery.trim() === '') {
       setMessage('Please enter award title')
       return
     }
 
     setMessage("Loading...")
-    fetch(`/api/search_award_title?title=${searchQuery}`)
+    fetch(`/api/search_award_title?title=${searchQuery.trim()}`)
     .then((res) => res.json())
     .then((awardData) => {
       awardData.length === 0 ? setMessage('Your search did not return any results.') : setMessage('')
@@ -103,57 +121,10 @@ export default function SearchResults() {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      
       <div className="flex flex-col">
-        
-        {/* Home Button */}
-        <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push('/') }
-            className="w-full flex items-center justify-start ml-2 p-4 hover:bg-white mt-5"
-          >
-          <Home className="h-6 w-6 mr-2" />
-          {isSidebarOpen && <span><b>Main Search Page</b></span>}
-        </Button>
-
-        {/* Sidebar for filtering data */}
-        <div style={{marginTop: '68px', marginBottom: '63px', height: '100%'}}
-          className={`bg-white border h-100 rounded-lg bg-white transition-all duration-300 ease-in-out 
-            overflow-hidden ${isSidebarOpen ? 'w-64' : 'w-12'}`}>
-
-          <div className="h-full flex flex-col">
-            <div className="flex justify-between items-center p-4">
-              {isSidebarOpen && <h2 className="text-lg font-semibold">Refined by</h2>}
-              <Button variant="ghost" size="sm" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-                <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${isSidebarOpen ? 'rotate-180' : ''}`} />
-              </Button>
-            </div>
-            {isSidebarOpen && (
-              <div className="flex-1 overflow-y-auto p-4">
-                <div className="space-y-4">
-                  {/* <div>
-                    <h3 className="font-medium mb-2">State</h3>
-                    <div className="space-y-2">
-                      <div className="flex items-center">
-                        <Checkbox id="state-az" />
-                        <label htmlFor="state-az" className="ml-2 text-sm">Arizona (1)</label>
-                      </div>
-                      <div className="flex items-center">
-                        <Checkbox id="state-ca" />
-                        <label htmlFor="state-ca" className="ml-2 text-sm">California (1)</label>
-                      </div>
-                    </div>
-                  </div> */}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
+        <Sidebar />
       </div>
-      
-      
+
       {/* Main content */}
       <div className="flex-1 p-4 overflow-hidden flex flex-col">
 
@@ -176,13 +147,16 @@ export default function SearchResults() {
         {/* Export and sort controls */}
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center space-x-2">
-            <span className="text-sm">Export Results:</span>
+            <span className="text-sm">Found {results.length} {results.length == 1 ? 'award' : 'awards'}.</span>
+            {results.length > 0 && <>
+            <span className="text-sm">Export:</span>
             <Button variant="outline" size="sm" onClick={() => {}}>CSV</Button>
-            <Button variant="outline" size="sm" onClick={() => {}}>XML</Button>
+            <Button variant="outline" size="sm" onClick={() => {}}>XML</Button> </>}
           </div>
           <div className="flex items-center space-x-2">
 
             {/*Pop up dialog for data visualization*/}
+            {results.length > 0 && 
             <Root open={modalIsOpen} onOpenChange={setModalIsOpen}>
               <Trigger asChild>
                 <Button className="mr-4" variant="outline" size="default">Data Visualization</Button>
@@ -204,16 +178,16 @@ export default function SearchResults() {
                       <TabsTrigger value="Chart4">Chart 4</TabsTrigger>
                     </TabsList>
                     <TabsContent value="Chart1" className="flex justify-center">
-                      <div id="plotDiv1" style={{"height": "500px", "width": "800px"}}>{isGraphLoading && <b>Loading...</b>}</div>
+                      <div id="plotDiv1" style={{"height": "500px", "width": "800px"}}>{isGraphLoading && <span>Loading...</span>}</div>
                     </TabsContent>
                     <TabsContent value="Chart2" className="flex justify-center">
-                      <div id="plotDiv2" style={{"height": "500px", "width": "800px"}} >{isGraphLoading && <b>Loading...</b>}</div>
+                      <div id="plotDiv2" style={{"height": "500px", "width": "800px"}} >{isGraphLoading && <span>Loading...</span>}</div>
                     </TabsContent>
                     <TabsContent value="Chart3" className="flex justify-center">
-                      <div id="plotDiv3" style={{"height": "500px", "width": "800px"}} >{isGraphLoading && <b>Loading...</b>}</div>
+                      <div id="plotDiv3" style={{"height": "500px", "width": "800px"}} >{isGraphLoading && <span>Loading...</span>}</div>
                     </TabsContent>
                     <TabsContent value="Chart4" className="flex justify-center">
-                      <div id="plotDiv4" style={{"height": "500px", "width": "800px"}} >{isGraphLoading && <b>Loading...</b>}</div>
+                      <div id="plotDiv4" style={{"height": "500px", "width": "800px"}} >{isGraphLoading && <span>Loading...</span>}</div>
                     </TabsContent>
                   </Tabs>
                   
@@ -225,7 +199,9 @@ export default function SearchResults() {
                 </Content>
               </Portal>
             </Root>
-
+          }
+            
+              {/* Sort By dropdown */}
             <span className="text-sm">Sort By:</span>
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-[180px]">
@@ -252,8 +228,10 @@ export default function SearchResults() {
               </a>
               {/* {<h3 className="text-blue-600 hover:underline text-lg mb-2">{result.title}</h3>} */}
               <p className="text-sm text-gray-600">
-                Award Number: {result.awardID}; Program Officer: {result.programOfficer}; 
-                Organization: {result.institution}; Start Date: {result.effectiveDate}; 
+                Award Number: {result.awardID}; Principal Investigator: {result.primary_investigators}; 
+                Co-Principal Investigator: {result.co_primary_investigators};
+                Organization: {result.institution};
+                NSF Organization: {result.org_abbr}; Start Date: {result.effectiveDate}; 
                 Award Amount: ${result.amount?.toLocaleString()};
               </p>
             </div>

@@ -22,43 +22,44 @@ def get_db_connection():
 
 def query_to_json(query, params=()):
     conn = get_db_connection()
-    df = pd.read_sql_query(query, conn, params=params)
+    df = pd.read_sql_query(query + "LIMIT 3000", conn, params=params)
     conn.close()
     return df.to_json(orient='records')
 
-# Search by Award Title
+# Search by Award Title or Award ID
 @app.route('/search_award_title', methods=['GET'])
 def search_by_award_title():
     title = request.args.get('title')
-    query = "SELECT * FROM awards WHERE title LIKE ? LIMIT 3000"
-    return query_to_json(query, (f"%{title}%",))
-
-# Search by Award ID
-@app.route('/search_award_id', methods=['GET'])
-def search_by_award_id():
-    award_id = request.args.get('award_id')
-    query = "SELECT * FROM awards WHERE awardID = ? LIMIT 3000"
-    return query_to_json(query, (award_id,))
+    query = "SELECT * from awards where title LIKE ? OR awardID = ?"
+    return query_to_json(query, (f"%{title}%", title))
 
 # Search by Organization/University
 @app.route('/search_institution', methods=['GET'])
 def search_by_institution():
     institution_name = request.args.get('institution')
-    query = "SELECT * FROM awards WHERE institution LIKE ? LIMIT 3000"
+    query = "SELECT * FROM awards WHERE institution LIKE ?"
     return query_to_json(query, (f"%{institution_name}%",))
 
 # Search by Investigator Name
 @app.route('/search_name', methods=['GET'])
 def search_by_name():
     investigator_name = request.args.get('name')
-    query = "SELECT * FROM awards WHERE awardID in (SELECT awardID FROM investigators WHERE name LIKE ? LIMIT 3000)"
-    return query_to_json(query, (f"%{investigator_name}%",))
+    includeCoPI = request.args.get('includeCoPI')
+
+    query = "SELECT * FROM awards WHERE primary_investigators LIKE ?"
+    params = (f"%{investigator_name}%",)
+
+    if includeCoPI == 'true':
+        query = "SELECT * FROM awards WHERE primary_investigators LIKE ? OR co_primary_investigators LIKE ?"
+        params = (f"%{investigator_name}%", f"%{investigator_name}%")
+
+    return query_to_json(query, params)
 
 #Search by Organization Abbreviation
 @app.route('/search_org_abbr', methods=['GET'])
 def search_by_org_abbr():
     org_abbr = request.args.get('org_abbr')
-    query = "SELECT * FROM awards WHERE org_abbr LIKE ? LIMIT 3000"
+    query = "SELECT * FROM awards WHERE org_abbr LIKE ?"
     return query_to_json(query, (f"%{org_abbr}%",))
 
 
@@ -66,18 +67,20 @@ def search_by_org_abbr():
 
 
 # pandas and plotly example
-@app.route('/example', methods=['GET'])
+@app.route('/example', methods=['POST'])
 def pandas_example():
+    
 
     # test data
-    data = [
-        {"awardID": "1004589", "title": "Nonequilibrium Quantum Mechanics of Strongly Correlated Systems", "effectiveDate": "09/15/2010", "expDate": "08/31/2014", "amount": 285000.0, "instrument": "Continuing Grant", "programOfficer": "Daryl Hess", "institution": "New York University", "zipCode": "100121019", "state": "New York", "country": "United States", "org_abbr": "MPS", "org_name": "Direct For Mathematical & Physical Scien"},
-        {"awardID": "1005861", "title": "Nonequilibrium Materials Synthesis: Understanding and Controlling the Formation of Hierarchically Structured Microtubes", "effectiveDate": "09/15/2010", "expDate": "08/31/2015", "amount": 225000.0, "instrument": "Continuing Grant", "programOfficer": "Michael J. Scott", "institution": "Florida State University", "zipCode": "323060001", "state": "Florida", "country": "United States", "org_abbr": "MPS", "org_name": "Direct For Mathematical & Physical Scien"},
-        {"awardID": "1006605", "title": "Transport and Nonequilibrium Effects in Strongly Correlated Multilayer Nanostructure", "effectiveDate": "08/01/2010", "expDate": "07/31/2014", "amount": 630000.0, "instrument": "Continuing Grant", "programOfficer": "Andrey Dobrynin", "institution": "Georgetown University", "zipCode": "200570001", "state": "District of Columbia", "country": "United States", "org_abbr": "MPS", "org_name": "Direct For Mathematical & Physical Scien"}
-    ]
-    df = pd.DataFrame(data)
+    # data = [{"awardID":"0000009","title":"Design of Cutting Tools for High Speed Milling","effectiveDate":"06\/15\/2000","expDate":"05\/31\/2004","amount":280000.0,"instrument":"Continuing Grant","programOfficer":"george hazelrigg","institution":"University of Florida","zipCode":"326111941","state":"Florida","country":"United States","org_abbr":"ENG","org_name":"Directorate For Engineering","primary_investigators":"John C Ziegert","co_primary_investigators":"Jiri Tlusty,Tony L Schmitz","programElementCodes":"146800","programReferenceCodes":"9146,MANU"},
+    #         {"awardID":"0000047","title":"Collaborative Research: Deep Basin Experiment Synthesis","effectiveDate":"03\/01\/2000","expDate":"02\/29\/2004","amount":200000.0,"instrument":"Standard Grant","programOfficer":"Eric C. Itsweire","institution":"Florida State University","zipCode":"323060001","state":"Florida","country":"United States","org_abbr":"GEO","org_name":"Directorate For Geosciences","primary_investigators":"Kevin Speer","co_primary_investigators":None,"programElementCodes":"161000","programReferenceCodes":"1326,EGCH"}
+    #         ]
 
-    # Department by Year - Line Chart
+    data = request.json
+
+    df = pd.DataFrame(data['results'])  # Create DataFrame from JSON
+
+    # Department by Year - Bar Chart
     df['effectiveYear'] = pd.to_datetime(df['effectiveDate']).dt.year
     ptable = pd.pivot_table(df, values='amount', index='effectiveYear', columns='org_abbr', aggfunc='sum')
     ptable = ptable.fillna(0).reset_index()
@@ -86,11 +89,18 @@ def pandas_example():
     ptable_long = pd.melt(ptable, id_vars=['effectiveYear'], value_vars=ptable.columns[1:], var_name='Department', value_name='AwardTotal')
 
     # Create the plotly figure
-    fig = px.line(ptable_long, x='effectiveYear', y='AwardTotal', color='Department', title='Department by Year')
+    if data['type'] == 'bar':
+        fig = px.bar(ptable_long, x='effectiveYear', y='AwardTotal', color='Department', title='Department by Year')
+    elif data['type'] == 'line':
+        fig = px.line(ptable_long, x='effectiveYear', y='AwardTotal', color='Department', title='Department by Year')
+    else:
+        fig = px.scatter(ptable_long, x='effectiveYear', y='AwardTotal', color='Department', title='Department by Year')
 
     # Convert the plotly figure to JSON
-    graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
-    return graphJSON
+    return json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+
+
+
 
 
 

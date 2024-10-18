@@ -28,7 +28,7 @@ export default function SearchBar() {
     state: '',
     zipCode: '',
     country: '',
-    startYear: 2010,
+    startYear: 2000,
     endYear: 2024
   })
 
@@ -329,7 +329,7 @@ export default function SearchBar() {
               <div className="col-span-full">
                 <Label>Start Year</Label>
                 <Slider
-                  min={2010}
+                  min={2000}
                   max={2024}
                   step={1}
                   value={[searchQuery.startYear]}
@@ -343,7 +343,7 @@ export default function SearchBar() {
               <div className="col-span-full">
                 <Label>End Year</Label>
                 <Slider
-                  min={2010}
+                  min={2000}
                   max={2024}
                   step={1}
                   value={[searchQuery.endYear]}
