@@ -2,14 +2,12 @@ from flask import Flask, request
 import sqlite3
 import pandas as pd
 import git
-import matplotlib.pyplot as plt
-from plottable import Table, ColumnDefinition
-import seaborn as sns
+# import matplotlib.pyplot as plt
+# from plottable import Table, ColumnDefinition
+# import seaborn as sns
 import plotly.express as px
 import json
-import plotly
-
-
+import plotly.utils
 
 
 app = Flask(__name__)
@@ -26,6 +24,18 @@ def query_to_json(query, params=()):
     conn.close()
     return df.to_json(orient='records')
 
+
+# Search by keyword
+@app.route('/search_keyword', methods=['GET'])
+def search_by_keyword():
+    keyword = request.args.get('keyword')
+    query = "SELECT * FROM awards WHERE title LIKE ? OR awardID = ? OR institution LIKE ? OR primary_investigators LIKE ? OR co_primary_investigators LIKE ?"
+    return query_to_json(query, (f"%{keyword}%", keyword, f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"))
+
+
+
+#####    Main Search Page    #####
+
 # Search by Award Title or Award ID
 @app.route('/search_award_title', methods=['GET'])
 def search_by_award_title():
@@ -33,12 +43,6 @@ def search_by_award_title():
     query = "SELECT * from awards where title LIKE ? OR awardID = ?"
     return query_to_json(query, (f"%{title}%", title))
 
-# Search by Organization/University
-@app.route('/search_institution', methods=['GET'])
-def search_by_institution():
-    institution_name = request.args.get('institution')
-    query = "SELECT * FROM awards WHERE institution LIKE ?"
-    return query_to_json(query, (f"%{institution_name}%",))
 
 # Search by Investigator Name
 @app.route('/search_name', methods=['GET'])
@@ -55,13 +59,22 @@ def search_by_name():
 
     return query_to_json(query, params)
 
-#Search by Organization Abbreviation
-@app.route('/search_org_abbr', methods=['GET'])
-def search_by_org_abbr():
+
+##### TO-DO  - Modify to search for org_name, program officer, reference code, and element code
+# Search by Program 
+@app.route('/search_program', methods=['GET'])
+def search_by_program():
     org_abbr = request.args.get('org_abbr')
     query = "SELECT * FROM awards WHERE org_abbr LIKE ?"
     return query_to_json(query, (f"%{org_abbr}%",))
 
+
+# Search by Organization/University
+@app.route('/search_institution', methods=['GET'])
+def search_by_institution():
+    institution_name = request.args.get('institution')
+    query = "SELECT * FROM awards WHERE institution LIKE ?"
+    return query_to_json(query, (f"%{institution_name}%",))
 
 
 
@@ -97,7 +110,11 @@ def pandas_example():
         fig = px.scatter(ptable_long, x='effectiveYear', y='AwardTotal', color='Department', title='Department by Year')
 
     # Convert the plotly figure to JSON
-    return json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    return graphJSON
+    
+    ### Can also return as an object with other json objects like below
+    # return json.dumps({'bar': graphJSON, 'line': graphJSON2, 'scatter': graphJSON3})
 
 
 

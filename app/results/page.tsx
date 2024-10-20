@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { Search} from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {Root, Trigger, Portal, Overlay, Content, Title, Description, Close} from "@radix-ui/react-dialog";
 import { Cross2Icon } from "@radix-ui/react-icons";
+import { useSearchParams } from 'next/navigation'
 import Sidebar from './Sidebar'
+import { useRouter} from 'next/navigation'
+
 
 
 interface Award {
@@ -32,8 +35,10 @@ interface Award {
   programReferenceCodes?: string
 }
 
-export default function SearchResults() {
-
+function Results() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  
   const [searchQuery, setSearchQuery] = useState('')
   const [results, setResults] = useState<Award[]>([])
   const [sortBy, setSortBy] = useState('relevance')
@@ -43,13 +48,41 @@ export default function SearchResults() {
   const [activeChartTab, setActiveChartTab] = useState('Chart1')
   const [plotlyData, setPlotlyData] = useState<{ [key: string]: any }>({})
   const [message, setMessage] = useState('')
+  
 
-  // Load Plotly script
+  // Load Plotly script and fetch results if search query is present
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://cdn.plot.ly/plotly-latest.min.js';
     script.onload = () => setIsPlotlyScriptLoaded(true);
     document.body.appendChild(script);
+
+    // fetch results based on search query
+    if (searchParams.get('searchType') == 'title'){
+      setSearchQuery(searchParams.get('title') ?? '')
+      fetchAwards(`/api/search_award_title?title=${searchParams.get('title') ?? ''}`);
+    }
+    else if (searchParams.get('searchType') == 'name'){
+      setSearchQuery(searchParams.get('name') ?? '')
+      fetchAwards(`/api/search_name?name=${searchParams.get('name') ?? ''}&includeCoPI=${searchParams.get('includeCoPI') ?? ''}`);
+    }
+    else if (searchParams.get('searchType') == 'program'){
+      setSearchQuery(searchParams.get('program') ?? searchParams.get('programOfficer') ?? searchParams.get('elementCode') ?? searchParams.get('referenceCode') ?? '')
+      // TO-DO
+      //fetchAwards(`/api/search_program?program=${searchParams.get('program') ?? ''});
+    }
+    else if (searchParams.get('searchType') == 'organization'){
+      setSearchQuery(searchParams.get('organization') ?? '')
+      fetchAwards(`/api/search_institution?institution=${searchParams.get('organization') ?? ''}`);
+    }
+    else if (searchParams.get('keyword') != null){
+      setSearchQuery(searchParams.get('keyword') ?? '')
+      fetchAwards(`/api/search_keyword?keyword=${searchParams.get('keyword') ?? ''}`);
+    }
+    else{
+      setMessage("Please enter a search query")
+    }
+
   }, []);
 
 
@@ -89,16 +122,24 @@ export default function SearchResults() {
   }, [isPlotlyScriptLoaded, modalIsOpen, activeChartTab, plotlyData]);
 
 
-  // Function to handle search button click
+  // Function to handle search button click - search by keyword
   const handleSearch = () => {
     setResults([])
     if (searchQuery.trim() === '') {
       setMessage('Please enter award title')
       return
     }
+    router.push(`/results?keyword=${searchQuery.trim()}`);
+    
+    fetchAwards(`/api/search_keyword?keyword=${searchQuery.trim()}`);
+  }
 
+
+  // Function to fetch awards from input link
+  function fetchAwards (link: string){
     setMessage("Loading...")
-    fetch(`/api/search_award_title?title=${searchQuery.trim()}`)
+
+    fetch(link)
     .then((res) => res.json())
     .then((awardData) => {
       awardData.length === 0 ? setMessage('Your search did not return any results.') : setMessage('')
@@ -111,7 +152,6 @@ export default function SearchResults() {
 
     console.log('Searching for:', searchQuery)
   }
-
   
   const handleExport = (format: string) => {
     // Implement export logic here
@@ -133,7 +173,7 @@ export default function SearchResults() {
           <div className="flex gap-2">
             <Input
               type="search"
-              placeholder="Search award titles..."
+              placeholder="Search awards"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-grow bg-white"
@@ -147,7 +187,7 @@ export default function SearchResults() {
         {/* Export and sort controls */}
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center space-x-2">
-            <span className="text-sm">Found {results.length} {results.length == 1 ? 'award' : 'awards'}.</span>
+            {message !== 'Loading...' && <span className="text-sm">Found {results.length} {results.length == 1 ? 'award' : 'awards'}.</span>}
             {results.length > 0 && <>
             <span className="text-sm">Export:</span>
             <Button variant="outline" size="sm" onClick={() => {}}>CSV</Button>
@@ -219,7 +259,7 @@ export default function SearchResults() {
         {/* Results */}
         <div className="flex-1 overflow-y-auto border rounded-lg bg-white">
 
-          {message && <div className="p-4 text-center">{message}</div>}
+          {message && <div className="p-4 mt-5 text-center">{message}</div>}
 
           {message.length == 0 && results.map((result, index) => (
             <div key={index} className={`p-4 ${index !== results.length - 1 ? 'border-b' : ''}`}>
@@ -246,5 +286,13 @@ export default function SearchResults() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SearchResults(){
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+    <Results />
+    </Suspense>
   )
 }

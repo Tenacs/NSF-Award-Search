@@ -10,14 +10,13 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useRouter } from 'next/navigation'
+import { useRouter} from 'next/navigation'
 
 export default function SearchBar() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('award')
-  
+  const [activeTab, setActiveTab] = useState('title')
   const [searchQuery, setSearchQuery] = useState({
-    award: '',
+    title: '',
     name: '',
     includeCoPI: true,
     program: '',
@@ -48,9 +47,50 @@ export default function SearchBar() {
 
 
 
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    router.push("/results")
+
+    let params = {}
+
+    if (activeTab === 'title') {
+      params ={
+        title: searchQuery.title,
+        searchType: 'title'
+      }
+    }
+    else if (activeTab == 'name'){
+      params ={
+        name: searchQuery.name,
+        includeCoPI: searchQuery.includeCoPI,
+        searchType: 'name'
+      }
+    }
+    else if (activeTab == 'program'){
+      params ={
+        program: searchQuery.program,
+        programOfficer: searchQuery.programOfficer,
+        elementCode: searchQuery.elementCode,
+        referenceCode: searchQuery.referenceCode,
+        searchType: 'program'
+      }
+    }
+    else if (activeTab == 'organization'){
+      params ={
+        organization: searchQuery.organization,
+        searchType: 'organization'
+      }
+    }
+
+    const query = Object.entries(params)
+    .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+    .reduce((acc, [key, value]) => {
+      acc.append(key, value as string);
+      return acc;
+    }, new URLSearchParams())
+    .toString();
+
+    router.push(`/results?${query}`)
   }
 
 
@@ -60,18 +100,18 @@ export default function SearchBar() {
         <h1 className="text-2xl font-bold mb-4">NSF Awards Search</h1>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="award">Award Title/ID</TabsTrigger>
+            <TabsTrigger value="title">Award Title/ID</TabsTrigger>
             <TabsTrigger value="name">Name</TabsTrigger>
             <TabsTrigger value="program">Program</TabsTrigger>
             <TabsTrigger value="organization">Organization/University</TabsTrigger>
           </TabsList>
-          <TabsContent value="award">
+          <TabsContent value="title">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className='pt-3'>
                 <Input
-                  id="award"
-                  value={searchQuery.award}
-                  onChange={(e) => setSearchQuery((prev) => ({...prev, award: e.target.value}))}
+                  id="title"
+                  value={searchQuery.title}
+                  onChange={(e) => setSearchQuery((prev) => ({...prev, title: e.target.value}))}
                   placeholder="Enter Award Title or Award ID"
                 />
               </div>
@@ -110,22 +150,22 @@ export default function SearchBar() {
                     <SelectValue placeholder="Select a program" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[200px] overflow-y-auto">
-                  <SelectItem value="ENG-Directorate For Engineering">ENG - Directorate For Engineering</SelectItem>
-                  <SelectItem value="CSE-Direct For Computer & Info Scie & Enginr">CSE - Direct For Computer & Info Scie & Engineering</SelectItem>
-                  <SelectItem value="MPS-Direct For Mathematical & Physical Scien">MPS - Direct For Mathematical & Physical Science</SelectItem>
-                  <SelectItem value="EDU-Directorate for STEM Education">EDU - Directorate for STEM Education</SelectItem>
-                  <SelectItem value="GEO-Directorate For Geosciences">GEO - Directorate For Geosciences</SelectItem>
-                  <SelectItem value="SBE-Direct For Social, Behav & Economic Scie">SBE - Direct For Social, Behavioral & Economic Science</SelectItem>
-                  <SelectItem value="O/D-Office Of The Director">O/D - Office Of The Director</SelectItem>
-                  <SelectItem value="TIP-Dir for Tech, Innovation, & Partnerships">TIP - Dir for Tech, Innovation, & Partnerships</SelectItem>
-                  <SelectItem value="BIO-Direct For Biological Sciences">BIO - Direct For Biological Sciences</SelectItem>
-                  <SelectItem value="EHR-Direct For Education and Human Resources">EHR - Direct For Education and Human Resources</SelectItem>
-                  <SelectItem value="BFA-Office of Budget, Finance, & Award Management">BFA - Office of Budget, Finance, & Award Management</SelectItem>
-                  <SelectItem value="IRM-Office Of Information & Resource Mgmt">IRM - Office Of Information & Resource Mgmt</SelectItem>
-                  <SelectItem value="OPP-Office Of Polar Programs">OPP - Office Of Polar Programs</SelectItem>
-                  <SelectItem value="NCO-National Coordination Office">NCO - National Coordination Office</SelectItem>
-                  <SelectItem value="NNCO-Natl Nanotechnology Coordinating Office">NNCO - Natl Nanotechnology Coordinating Office</SelectItem>
-                  <SelectItem value="OCIO-Office of the Chief Information Officer">OCIO - Office of the Chief Information Officer</SelectItem>
+                  <SelectItem value="Directorate For Engineering">ENG - Directorate For Engineering</SelectItem>
+                  <SelectItem value="Direct For Computer & Info Scie & Enginr">CSE - Direct For Computer & Info Scie & Engineering</SelectItem>
+                  <SelectItem value="Direct For Mathematical & Physical Scien">MPS - Direct For Mathematical & Physical Science</SelectItem>
+                  <SelectItem value="Directorate for STEM Education">EDU - Directorate for STEM Education</SelectItem>
+                  <SelectItem value="Directorate For Geosciences">GEO - Directorate For Geosciences</SelectItem>
+                  <SelectItem value="For Social, Behav">SBE - Direct For Social, Behavioral & Economic Science</SelectItem>
+                  <SelectItem value="Office Of The Director">O/D - Office Of The Director</SelectItem>
+                  <SelectItem value="Dir for Tech, Innovation, & Partnerships">TIP - Dir for Tech, Innovation, & Partnerships</SelectItem>
+                  <SelectItem value="Direct For Biological Sciences">BIO - Direct For Biological Sciences</SelectItem>
+                  <SelectItem value="Direct For Education and Human Resources">EHR - Direct For Education and Human Resources</SelectItem>
+                  <SelectItem value="Office of Budget, Finance, & Award Management">BFA - Office of Budget, Finance, & Award Management</SelectItem>
+                  <SelectItem value="Office Of Information & Resource Mgmt">IRM - Office Of Information & Resource Mgmt</SelectItem>
+                  <SelectItem value="Office Of Polar Programs">OPP - Office Of Polar Programs</SelectItem>
+                  <SelectItem value="National Coordination Office">NCO - National Coordination Office</SelectItem>
+                  <SelectItem value="Natl Nanotechnology Coordinating Office">NNCO - Natl Nanotechnology Coordinating Office</SelectItem>
+                  <SelectItem value="Office of the Chief Information Officer">OCIO - Office of the Chief Information Officer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -191,7 +231,7 @@ export default function SearchBar() {
         <AccordionItem value="filters">
           <AccordionTrigger>Advanced Filters</AccordionTrigger>
           <AccordionContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-1">
               <div>
                 <Label htmlFor="state">State</Label>
                 <Select onValueChange={(value) => setSearchQuery((prev) => ({...prev, state: value}))} value={searchQuery.state}>

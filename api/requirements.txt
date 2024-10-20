@@ -1,9 +1,5 @@
 Flask==3.0.3
 GitPython
 pandas
-matplotlib.pyplot
-plottable
-seaborn
 plotly.express
-json
 plotly.utils
