@@ -52,32 +52,42 @@ function Results() {
 
   // Load Plotly script and fetch results if search query is present
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.plot.ly/plotly-latest.min.js';
-    script.onload = () => setIsPlotlyScriptLoaded(true);
-    document.body.appendChild(script);
+    // Check if the Plotly script is already added
+    if (!document.querySelector('script[src="https://cdn.plot.ly/plotly-latest.min.js"]')) {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.plot.ly/plotly-latest.min.js';
+      script.onload = () => setIsPlotlyScriptLoaded(true);
+      document.body.appendChild(script);
+    } else {
+      setIsPlotlyScriptLoaded(true);
+  }
 
     // fetch results based on search query
     if (searchParams.get('searchType') == 'title'){
-      setSearchQuery(searchParams.get('title') ?? '')
-      fetchAwards(`/api/search_award_title?title=${searchParams.get('title') ?? ''}`);
+      const title = searchParams.get('title') ?? ''
+      setSearchQuery(title)
+      fetchAwards(`/api/search_award_title?title=${title}`, title);
     }
     else if (searchParams.get('searchType') == 'name'){
-      setSearchQuery(searchParams.get('name') ?? '')
-      fetchAwards(`/api/search_name?name=${searchParams.get('name') ?? ''}&includeCoPI=${searchParams.get('includeCoPI') ?? ''}`);
+      const name = searchParams.get('name') ?? ''
+      setSearchQuery(name)
+      fetchAwards(`/api/search_name?name=${name}&includeCoPI=${searchParams.get('includeCoPI') ?? ''}`, name);
     }
     else if (searchParams.get('searchType') == 'program'){
-      setSearchQuery(searchParams.get('program') ?? searchParams.get('programOfficer') ?? searchParams.get('elementCode') ?? searchParams.get('referenceCode') ?? '')
+      const program = searchParams.get('program') ?? searchParams.get('programOfficer') ?? searchParams.get('elementCode') ?? searchParams.get('referenceCode') ?? ''
+      setSearchQuery(program)
       // TO-DO
-      //fetchAwards(`/api/search_program?program=${searchParams.get('program') ?? ''});
+      //fetchAwards(`/api/search_program?program=${searchParams.get('program') ?? ''}, program);
     }
     else if (searchParams.get('searchType') == 'organization'){
-      setSearchQuery(searchParams.get('organization') ?? '')
-      fetchAwards(`/api/search_institution?institution=${searchParams.get('organization') ?? ''}`);
+      const org = searchParams.get('organization') ?? ''
+      setSearchQuery(org)
+      fetchAwards(`/api/search_institution?institution=${org}`, org);
     }
-    else if (searchParams.get('keyword') != null){
-      setSearchQuery(searchParams.get('keyword') ?? '')
-      fetchAwards(`/api/search_keyword?keyword=${searchParams.get('keyword') ?? ''}`);
+    else if (searchParams.get('keyword')){
+      const keyword = searchParams.get('keyword') ?? ''
+      setSearchQuery(keyword)
+      fetchAwards(`/api/search_keyword?keyword=${keyword}`, keyword);
     }
     else{
       setMessage("Please enter a search query")
@@ -125,25 +135,35 @@ function Results() {
   // Function to handle search button click - search by keyword
   const handleSearch = () => {
     setResults([])
-    if (searchQuery.trim() === '') {
+    const keyword = searchQuery.trim()
+    if (keyword === '') {
       setMessage('Please enter award title')
       return
     }
-    router.push(`/results?keyword=${searchQuery.trim()}`);
+    router.push(`/results?keyword=${keyword}`);
     
-    fetchAwards(`/api/search_keyword?keyword=${searchQuery.trim()}`);
+    fetchAwards(`/api/search_keyword?keyword=${keyword}`, keyword);
   }
 
 
   // Function to fetch awards from input link
-  function fetchAwards (link: string){
+  function fetchAwards (link: string, query: string){
     setMessage("Loading...")
 
     fetch(link)
     .then((res) => res.json())
-    .then((awardData) => {
-      awardData.length === 0 ? setMessage('Your search did not return any results.') : setMessage('')
-      setResults(awardData)
+    .then((data) => {
+      data.length === 0 ? setMessage('Your search did not return any results.') : setMessage('')
+
+      const highlightedData = data.map((award: Award) => ({
+        ...award,
+        awardID: highlightMatch(award.awardID, query),
+        primary_investigators: highlightMatch(award.primary_investigators, query),
+        co_primary_investigators: highlightMatch(award.co_primary_investigators, query),
+        institution: highlightMatch(award.institution, query),
+      }));
+
+      setResults(highlightedData)
     })
     .catch((error) => {
       setMessage('An error occurred while fetching data. Please check console for more details.')
@@ -268,9 +288,10 @@ function Results() {
               </a>
               {/* {<h3 className="text-blue-600 hover:underline text-lg mb-2">{result.title}</h3>} */}
               <p className="text-sm text-gray-600">
-                Award Number: {result.awardID}; Principal Investigator: {result.primary_investigators}; 
-                Co-Principal Investigator: {result.co_primary_investigators};
-                Organization: {result.institution};
+                Award Number: <span dangerouslySetInnerHTML={{ __html: result.awardID ?? '' }} />; 
+                Principal Investigator: <span dangerouslySetInnerHTML={{ __html: result.primary_investigators ?? '' }} />; 
+                Co-Principal Investigator: <span dangerouslySetInnerHTML={{ __html: result.co_primary_investigators ?? '' }} />;
+                Organization: <span dangerouslySetInnerHTML={{ __html: result.institution ?? '' }} />;
                 NSF Organization: {result.org_abbr}; Start Date: {result.effectiveDate}; 
                 Award Amount: ${result.amount?.toLocaleString()};
               </p>
@@ -289,6 +310,16 @@ function Results() {
   )
 }
 
+
+function highlightMatch(text?: string, query?: string){
+  if (!query || !text) return text;
+
+  // Escape special regex characters in the query string
+  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  const regex = new RegExp(`(${escapedQuery})`, 'gi');
+  return text.replace(regex, '<b>$1</b>');
+}
 export default function SearchResults(){
   return (
     <Suspense fallback={<div>Loading...</div>}>
