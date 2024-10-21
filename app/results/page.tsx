@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { Search} from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight} from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -48,7 +48,8 @@ function Results() {
   const [activeChartTab, setActiveChartTab] = useState('Chart1')
   const [plotlyData, setPlotlyData] = useState<{ [key: string]: any }>({})
   const [message, setMessage] = useState('')
-  
+  const [currentPage, setCurrentPage] = useState(1)
+  const resultsPerPage = 50
 
   // Load Plotly script and fetch results if search query is present
   useEffect(() => {
@@ -99,6 +100,7 @@ function Results() {
   // Fetch plot data whenever results change
   useEffect(() => {
     if (results.length === 0) return;
+    setCurrentPage(1)
     getPlotlyChart('bar', results, "Chart1");
     getPlotlyChart('line', results, "Chart2");
     getPlotlyChart('bar', results, "Chart3");
@@ -125,7 +127,7 @@ function Results() {
       // @ts-ignore
       setTimeout(() => {
         // @ts-ignore
-        Plotly.newPlot(`plotDiv${activeChartTab.slice(-1)}`, plotlyData[activeChartTab], {}).then((a) => {console.log(a); setIsGraphLoading(false)});
+        Plotly.newPlot(`plotDiv${activeChartTab.slice(-1)}`, plotlyData[activeChartTab], {}).then(setIsGraphLoading(false));
       }, 0);
         
     }
@@ -135,6 +137,7 @@ function Results() {
   // Function to handle search button click - search by keyword
   const handleSearch = () => {
     setResults([])
+    setCurrentPage(1)
     const keyword = searchQuery.trim()
     if (keyword === '') {
       setMessage('Please enter award title')
@@ -177,6 +180,29 @@ function Results() {
     // Implement export logic here
     console.log('Exporting in format:', format)
   }
+
+  // Function to sort results
+  const sortResults = (results: Award[], sortBy: string) => {
+    return [...results].sort((a, b) => {
+      if (sortBy === 'date') {
+        return new Date(b.effectiveDate || '').getTime() - new Date(a.effectiveDate || '').getTime();
+      } else if (sortBy === 'amount') {
+        return (b.amount || 0) - (a.amount || 0);
+      } else {
+        // Default to relevance
+        const aMatches = a.title === searchQuery || a.title?.toLowerCase().includes(searchQuery.toLowerCase());
+        const bMatches = b.title === searchQuery || b.title?.toLowerCase().includes(searchQuery.toLowerCase());
+        if (aMatches && !bMatches) return -1; // a should come first
+        if (!aMatches && bMatches) return 1;  // b should come first
+        return 0;
+      }
+    });
+  };
+
+  // Re-sort results whenever sortBy changes
+  useEffect(() => {
+    setResults(prevResults => sortResults(prevResults, sortBy));
+  }, [sortBy]);
 
 
   return (
@@ -281,12 +307,11 @@ function Results() {
 
           {message && <div className="p-4 mt-5 text-center">{message}</div>}
 
-          {message.length == 0 && results.map((result, index) => (
+          {message.length == 0 && results.slice((currentPage - 1) * resultsPerPage, currentPage * resultsPerPage).map((result, index) => (
             <div key={index} className={`p-4 ${index !== results.length - 1 ? 'border-b' : ''}`}>
               <a href={`https://www.nsf.gov/awardsearch/showAward?AWD_ID=${result.awardID}`} target="_blank" className="text-blue-600 hover:underline text-lg">
                 {result.title}
               </a>
-              {/* {<h3 className="text-blue-600 hover:underline text-lg mb-2">{result.title}</h3>} */}
               <p className="text-sm text-gray-600">
                 Award Number: <span dangerouslySetInnerHTML={{ __html: result.awardID ?? '' }} />; 
                 Principal Investigator: <span dangerouslySetInnerHTML={{ __html: result.primary_investigators ?? '' }} />; 
@@ -302,9 +327,29 @@ function Results() {
         {/* Pagination */}
         <div className="flex justify-between items-center mt-4">
           <div className="text-sm text-gray-600">
-            Displaying {results.length == 0 ? 0 : 1} - {results.length} of {results.length}
+            Displaying {results.length == 0 ? 0 : (currentPage - 1) * resultsPerPage + 1} - {Math.min(currentPage * resultsPerPage, results.length)} of {results.length}
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm">Page {currentPage} of {Math.ceil(results.length / resultsPerPage) || 1}</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setCurrentPage(prev => Math.min(Math.ceil(results.length / resultsPerPage), prev + 1) || 1)}
+              disabled={currentPage === Math.ceil(results.length / resultsPerPage) || results.length === 0}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
         </div>
+
       </div>
     </div>
   )

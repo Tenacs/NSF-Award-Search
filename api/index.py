@@ -20,7 +20,7 @@ def get_db_connection():
 
 def query_to_json(query, params=()):
     conn = get_db_connection()
-    df = pd.read_sql_query(query + "LIMIT 3000", conn, params=params)
+    df = pd.read_sql_query("Select * FROM (" + query + ") LIMIT 3000", conn, params=params)
     conn.close()
     return df.to_json(orient='records')
 
@@ -29,8 +29,8 @@ def query_to_json(query, params=()):
 @app.route('/search_keyword', methods=['GET'])
 def search_by_keyword():
     keyword = request.args.get('keyword')
-    query = "SELECT * FROM awards WHERE title LIKE ? OR awardID = ? OR institution LIKE ? OR primary_investigators LIKE ? OR co_primary_investigators LIKE ?"
-    return query_to_json(query, (f"%{keyword}%", keyword, f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"))
+    query = "SELECT * FROM awards WHERE title LIKE ? OR awardID = ? OR institution LIKE ? OR primary_investigators LIKE ? OR co_primary_investigators LIKE ? ORDER BY (title LIKE ?) DESC"
+    return query_to_json(query, (f"%{keyword}%", keyword, f"%{keyword}%", f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"))
 
 
 
