@@ -96,7 +96,78 @@ def search_by_institution():
     query = "SELECT * FROM awards WHERE institution LIKE ?"
     return query_to_json(query, (f"%{institution_name}%",))
 
+# Advanced Search Function
+@app.route('/advanced_search', methods=['GET'])
+def advanced_search():
+    # Search parameters from the request
+    title = request.args.get('title')
+    award_id = request.args.get('awardID')
+    institution = request.args.get('institution')
+    investigator = request.args.get('investigator')
+    program = request.args.get('program')
+    start_year = request.args.get('startYear')
+    end_year = request.args.get('endYear')
+    exp_date = request.args.get('expDate')
+    amount = request.args.get('amount')
+    zip_code = request.args.get('zipCode')
+    state = request.args.get('state')
+    country = request.args.get('country')
+    
+    # Start building the SQL query
+    query = "SELECT * FROM awards WHERE 1=1"
+    conditions = []
+    params = []
+    
+    if title:
+        conditions.append("title LIKE ?")
+        params.append(f"%{title}%")
+    if award_id:
+        conditions.append("awardID = ?")
+        params.append(award_id)
+    if institution:
+        conditions.append("institution LIKE ?")
+        params.append(f"%{institution}%")
+    if investigator:
+        # Search both primary and co-primary investigators
+        conditions.append("(primary_investigators LIKE ? OR co_primary_investigators LIKE ?)")
+        params.extend([f"%{investigator}%", f"%{investigator}%"])
+    if program:
+        # Assume program refers to org_name for this search
+        conditions.append("org_name LIKE ?")
+        params.append(f"%{program}%")
+    if start_year and end_year:
+        # Match any date within the start and end year by isolating the year
+        conditions.append("CAST(SUBSTR(effectiveDate, -4) AS INTEGER) BETWEEN ? AND ?")
+        params.append(start_year)
+        params.append(end_year)
+    elif start_year:
+        conditions.append("CAST(SUBSTR(effectiveDate, -4) AS INTEGER) >= ?")
+        params.append(start_year)
+    elif end_year:
+        conditions.append("CAST(SUBSTR(effectiveDate, -4) AS INTEGER) <= ?")
+        params.append(end_year)
+    if exp_date:
+        conditions.append("expDate <= ?")
+        params.append(exp_date)
+    if amount:
+        conditions.append("amount >= ?")
+        params.append(amount)
+    if zip_code:
+        conditions.append("zipCode = ?")
+        params.append(zip_code)
+    if state:
+        conditions.append("state LIKE ?")
+        params.append(f"%{state}%")
+    if country:
+        conditions.append("country LIKE ?")
+        params.append(f"%{country}%")
 
+    # Combine conditions to form the WHERE clause
+    if conditions:
+        query += " AND " + " AND ".join(conditions)
+
+    # Execute and return JSON results
+    return query_to_json(query, params)
 
 
 # pandas and plotly example
