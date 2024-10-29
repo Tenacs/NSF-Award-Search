@@ -60,13 +60,33 @@ def search_by_name():
     return query_to_json(query, params)
 
 
-##### TO-DO  - Modify to search for org_name, program officer, reference code, and element code
 # Search by Program 
 @app.route('/search_program', methods=['GET'])
 def search_by_program():
-    org_abbr = request.args.get('org_abbr')
-    query = "SELECT * FROM awards WHERE org_abbr LIKE ?"
-    return query_to_json(query, (f"%{org_abbr}%",))
+    org_name = request.args.get('org_name')
+    officer_name = request.args.get('programOfficer')
+    ref_code = request.args.get('programReferenceCodes')
+    ele_code = request.args.get('programElementCodes')
+    query = "SELECT * FROM awards WHERE 1=1"
+    params = []
+
+    if officer_name:
+        query += " AND programOfficer LIKE ?"
+        params.append(f"%{officer_name}%")
+
+    if org_name:
+        query += " AND org_name LIKE ?"
+        params.append(f"%{org_name}%")
+
+    if ref_code:
+        query += " AND programReferenceCodes LIKE ?"
+        params.append(f"%{ref_code}%")
+
+    if ele_code:
+        query += " AND programElementCodes LIKE ?"
+        params.append(f"%{ele_code}%")
+
+    return query_to_json(query, params)
 
 
 # Search by Organization/University
