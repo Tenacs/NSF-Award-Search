@@ -3,3 +3,4 @@ GitPython
 pandas
 plotly.express
 plotly.utils
+us

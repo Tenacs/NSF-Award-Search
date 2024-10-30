@@ -75,8 +75,11 @@ function Results() {
       fetchAwards(`/api/search_name?name=${name}&includeCoPI=${searchParams.get('includeCoPI') ?? ''}`, name);
     }
     else if (searchParams.get('searchType') == 'program'){
-      const program = searchParams.get('program') ?? searchParams.get('programOfficer') ?? searchParams.get('elementCode') ?? searchParams.get('referenceCode') ?? ''
-      setSearchQuery(program)
+      const program = searchParams.get('program') 
+      const programOfficer = searchParams.get('programOfficer')
+      const elementCode = searchParams.get('elementCode') 
+      const referenceCode = searchParams.get('referenceCode')
+      setSearchQuery(program ?? programOfficer ?? elementCode ?? referenceCode ?? '')
       // TO-DO
       //fetchAwards(`/api/search_program?program=${searchParams.get('program') ?? ''}, program);
     }
@@ -101,22 +104,21 @@ function Results() {
   useEffect(() => {
     if (results.length === 0) return;
     setCurrentPage(1)
-    getPlotlyChart('bar', results, "Chart1");
-    getPlotlyChart('line', results, "Chart2");
-    getPlotlyChart('bar', results, "Chart3");
-    getPlotlyChart('', results, "Chart4");
+    getPlotlyCharts(results);
   }, [results]);
 
 
-  function getPlotlyChart(type: string, data: Award[], tabs: string) {
+  function getPlotlyCharts(data: Award[]) {
     
     fetch('/api/example', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({"type": type, "results": data}),
+      body: JSON.stringify(data),
     })
     .then((res) => res.json())
-    .then((data) => setPlotlyData((prev) => ({ ...prev, [tabs]: data })))
+    .then((data) => setPlotlyData({"Chart1": JSON.parse(data['fig1']), "Chart2": JSON.parse(data['fig2']), "Chart3": JSON.parse(data['fig3']), "Chart4": JSON.parse(data['fig4']), 
+      "Chart5": JSON.parse(data['fig5'])
+    }))
     .catch((err) => console.error('Error loading Plotly data:', err));
   }
 
@@ -126,8 +128,10 @@ function Results() {
       setIsGraphLoading(true);
       // @ts-ignore
       setTimeout(() => {
+        var plot = plotlyData[activeChartTab];
+        plot.layout = {...plot.layout, modebar: {orientation: 'v'}, width: 900, height: 500, margin: {r: 120}};
         // @ts-ignore
-        Plotly.newPlot(`plotDiv${activeChartTab.slice(-1)}`, plotlyData[activeChartTab], {}).then(setIsGraphLoading(false));
+        Plotly.newPlot(`plotDiv${activeChartTab.slice(-1)}`, plot, {}).then(setIsGraphLoading(false));
       }, 0);
         
     }
@@ -157,7 +161,6 @@ function Results() {
     .then((res) => res.json())
     .then((data) => {
       data.length === 0 ? setMessage('Your search did not return any results.') : setMessage('')
-
       const highlightedData = data.map((award: Award) => ({
         ...award,
         awardID: highlightMatch(award.awardID, query),
@@ -166,7 +169,7 @@ function Results() {
         institution: highlightMatch(award.institution, query),
       }));
 
-      setResults(highlightedData)
+      setResults(sortResults(highlightedData, sortBy))
     })
     .catch((error) => {
       setMessage('An error occurred while fetching data. Please check console for more details.')
@@ -190,10 +193,21 @@ function Results() {
         return (b.amount || 0) - (a.amount || 0);
       } else {
         // Default to relevance
-        const aMatches = a.title === searchQuery || a.title?.toLowerCase().includes(searchQuery.toLowerCase());
-        const bMatches = b.title === searchQuery || b.title?.toLowerCase().includes(searchQuery.toLowerCase());
-        if (aMatches && !bMatches) return -1; // a should come first
-        if (!aMatches && bMatches) return 1;  // b should come first
+        const query = searchQuery.toLowerCase();
+        const wholeWordRegex = new RegExp(`\\b${query}\\b`, 'i');
+        
+        const aWholeWordMatch = wholeWordRegex.test(a.title || '');
+        const bWholeWordMatch = wholeWordRegex.test(b.title || '');
+
+        if (aWholeWordMatch && !bWholeWordMatch) return -1; // a should come first
+        if (!aWholeWordMatch && bWholeWordMatch) return 1;  // b should come first
+
+        const aPartialMatch = (a.title || '').toLowerCase().includes(query);
+        const bPartialMatch = (b.title || '').toLowerCase().includes(query);
+
+        if (aPartialMatch && !bPartialMatch) return -1; // a should come first
+        if (!aPartialMatch && bPartialMatch) return 1;  // b should come first
+
         return 0;
       }
     });
@@ -256,24 +270,28 @@ function Results() {
                     Summary stats for your search results
                   </Description>
 
-                  <Tabs value={activeChartTab} onValueChange={setActiveChartTab} style={{"height": "550px", "width": "900px"}}>
-                    <TabsList className="grid w-full grid-cols-4 mt-1">
-                      <TabsTrigger value="Chart1">Chart 1</TabsTrigger>
-                      <TabsTrigger value="Chart2">Chart 2</TabsTrigger>
-                      <TabsTrigger value="Chart3">Chart 3</TabsTrigger>
-                      <TabsTrigger value="Chart4">Chart 4</TabsTrigger>
+                  <Tabs value={activeChartTab} onValueChange={setActiveChartTab} style={{"height": "600px", "width": "950px"}}>
+                    <TabsList className="grid w-full grid-cols-5 mt-1">
+                      <TabsTrigger value="Chart1">Departments</TabsTrigger>
+                      <TabsTrigger value="Chart2">By Year</TabsTrigger>
+                      <TabsTrigger value="Chart3">US States</TabsTrigger>
+                      <TabsTrigger value="Chart4">Top 5 Awards</TabsTrigger>
+                      <TabsTrigger value="Chart5">By Year Line</TabsTrigger>
                     </TabsList>
                     <TabsContent value="Chart1" className="flex justify-center">
-                      <div id="plotDiv1" style={{"height": "500px", "width": "800px"}}>{isGraphLoading && <span>Loading...</span>}</div>
+                      <div id="plotDiv1" style={{"height": "500px", "width": "900px"}}>{isGraphLoading && <span>Loading...</span>}</div>
                     </TabsContent>
                     <TabsContent value="Chart2" className="flex justify-center">
-                      <div id="plotDiv2" style={{"height": "500px", "width": "800px"}} >{isGraphLoading && <span>Loading...</span>}</div>
+                      <div id="plotDiv2" style={{"height": "500px", "width": "900px"}} >{isGraphLoading && <span>Loading...</span>}</div>
                     </TabsContent>
                     <TabsContent value="Chart3" className="flex justify-center">
-                      <div id="plotDiv3" style={{"height": "500px", "width": "800px"}} >{isGraphLoading && <span>Loading...</span>}</div>
+                      <div id="plotDiv3" style={{"height": "500px", "width": "900px"}} >{isGraphLoading && <span>Loading...</span>}</div>
                     </TabsContent>
                     <TabsContent value="Chart4" className="flex justify-center">
-                      <div id="plotDiv4" style={{"height": "500px", "width": "800px"}} >{isGraphLoading && <span>Loading...</span>}</div>
+                      <div id="plotDiv4" style={{"height": "500px", "width": "900px"}} >{isGraphLoading && <span>Loading...</span>}</div>
+                    </TabsContent>
+                    <TabsContent value="Chart5" className="flex justify-center">
+                      <div id="plotDiv5" style={{"height": "500px", "width": "900px"}}>{isGraphLoading && <span>Loading...</span>}</div>
                     </TabsContent>
                   </Tabs>
                   

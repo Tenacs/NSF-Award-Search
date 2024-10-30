@@ -1,5 +1,5 @@
 
-NSF Award Search
+NSF Awards Search
 ========================
 
 ## Introduction
@@ -11,14 +11,14 @@ This is an Awards Search Application for the National Science Foundation that us
 
 The Python/Flask server is hosted in the `/api` folder.
 
-On localhost, the rewrite will be made to the `127.0.0.1:5328` port, which is where the Flask server is running.
+On localhost, the Flask server will be running at `127.0.0.1:5328`.
 
 In production, the Flask server is hosted at [NSF.pythonanywhere.com](https://nsf.pythonanywhere.com/search_award_title?title=coffee).
 
 ## Frontend
-The frontend is hosted at https://nsf-award-search.vercel.app/
+The frontend is hosted at [NSF-Award-Search.vercel.app](https://nsf-award-search.vercel.app/)
 
-It is built with React / Typescript and is styled using TailwindCSS. The home page of the app is hosted in `/app/page.tsx`
+It is built with React / Typescript and is styled using TailwindCSS. The home page of the app is located at `/app/page.tsx`
 
 
 
@@ -51,7 +51,7 @@ Activate the virtual environment:
   venv\Scripts\activate
   ```
 
-Then, install the dependencies:
+Install the dependencies:
 
 ```bash
 npm install

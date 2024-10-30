@@ -2,9 +2,7 @@ from flask import Flask, request
 import sqlite3
 import pandas as pd
 import git
-# import matplotlib.pyplot as plt
-# from plottable import Table, ColumnDefinition
-# import seaborn as sns
+import us
 import plotly.express as px
 import json
 import plotly.utils
@@ -20,7 +18,7 @@ def get_db_connection():
 
 def query_to_json(query, params=()):
     conn = get_db_connection()
-    df = pd.read_sql_query("Select * FROM (" + query + ") LIMIT 3000", conn, params=params)
+    df = pd.read_sql_query(query + " LIMIT 3000", conn, params=params)
     conn.close()
     return df.to_json(orient='records')
 
@@ -29,8 +27,10 @@ def query_to_json(query, params=()):
 @app.route('/search_keyword', methods=['GET'])
 def search_by_keyword():
     keyword = request.args.get('keyword')
-    query = "SELECT * FROM awards WHERE title LIKE ? OR awardID = ? OR institution LIKE ? OR primary_investigators LIKE ? OR co_primary_investigators LIKE ? ORDER BY (title LIKE ?) DESC"
-    return query_to_json(query, (f"%{keyword}%", keyword, f"%{keyword}%", f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"))
+    query = """SELECT * FROM awards WHERE title LIKE ? OR awardID = ? OR institution LIKE ? OR primary_investigators LIKE ? 
+                OR co_primary_investigators LIKE ? OR programOfficer LIKE ? OR org_abbr LIKE ? OR org_name LIKE ? 
+                OR programElementCodes LIKE ? OR programReferenceCodes LIKE ?""" 
+    return query_to_json(query, (f"%{keyword}%", keyword, f"%{keyword}%", f"%{keyword}%", f"%{keyword}%", f"%{keyword}%", f"%{keyword}%", f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"))
 
 
 
@@ -170,19 +170,25 @@ def advanced_search():
     return query_to_json(query, params)
 
 
-# pandas and plotly example
+# Data Visualization - Charts
 @app.route('/example', methods=['POST'])
 def pandas_example():
-    
-
-    # test data
-    # data = [{"awardID":"0000009","title":"Design of Cutting Tools for High Speed Milling","effectiveDate":"06\/15\/2000","expDate":"05\/31\/2004","amount":280000.0,"instrument":"Continuing Grant","programOfficer":"george hazelrigg","institution":"University of Florida","zipCode":"326111941","state":"Florida","country":"United States","org_abbr":"ENG","org_name":"Directorate For Engineering","primary_investigators":"John C Ziegert","co_primary_investigators":"Jiri Tlusty,Tony L Schmitz","programElementCodes":"146800","programReferenceCodes":"9146,MANU"},
-    #         {"awardID":"0000047","title":"Collaborative Research: Deep Basin Experiment Synthesis","effectiveDate":"03\/01\/2000","expDate":"02\/29\/2004","amount":200000.0,"instrument":"Standard Grant","programOfficer":"Eric C. Itsweire","institution":"Florida State University","zipCode":"323060001","state":"Florida","country":"United States","org_abbr":"GEO","org_name":"Directorate For Geosciences","primary_investigators":"Kevin Speer","co_primary_investigators":None,"programElementCodes":"161000","programReferenceCodes":"1326,EGCH"}
-    #         ]
 
     data = request.json
+    df = pd.DataFrame(data)  # Create DataFrame from JSON
 
-    df = pd.DataFrame(data['results'])  # Create DataFrame from JSON
+
+    # Add state abbreviation column
+    df['State'] = df['state'].apply(lambda x: us.states.lookup(x).abbr if x is not None and us.states.lookup(x) else None)
+
+    # Extract year from effectiveDate and add as a new column
+    df['Year'] = pd.to_datetime(df['effectiveDate']).dt.year
+
+    # Organization
+    # Department division by number of awards - pie chart with plotly
+    dep_counts = df['org_abbr'].value_counts()
+    fig1 = px.pie(dep_counts, values=dep_counts, names=dep_counts.index, title='Departments by Number of Awards')
+    fig1.update_layout()    
 
     # Department by Year - Bar Chart
     df['effectiveYear'] = pd.to_datetime(df['effectiveDate']).dt.year
@@ -193,19 +199,86 @@ def pandas_example():
     ptable_long = pd.melt(ptable, id_vars=['effectiveYear'], value_vars=ptable.columns[1:], var_name='Department', value_name='AwardTotal')
 
     # Create the plotly figure
-    if data['type'] == 'bar':
-        fig = px.bar(ptable_long, x='effectiveYear', y='AwardTotal', color='Department', title='Department by Year')
-    elif data['type'] == 'line':
-        fig = px.line(ptable_long, x='effectiveYear', y='AwardTotal', color='Department', title='Department by Year')
-    else:
-        fig = px.scatter(ptable_long, x='effectiveYear', y='AwardTotal', color='Department', title='Department by Year')
+    fig2 = px.bar(ptable_long, x='effectiveYear', y='AwardTotal', color='Department', title='Department by Year')
+
+
+    # Convert amount to numeric
+    df['amount'] = pd.to_numeric(df['amount'])
+    df_aggregated = df.groupby('State', as_index=False)['amount'].sum()
+
+    # Choropleth map using plotly
+    fig3 = px.choropleth(
+        df_aggregated,
+        locations='State',
+        locationmode='USA-states',
+        color='amount',
+        scope="usa",
+        color_continuous_scale="Viridis",
+        title="US States by Award Amount",
+    )
+
+    fig3.update_layout(
+        coloraxis_colorbar=dict(
+            title="Awards in USD"
+        )
+    )
+
+
+    # Individual
+    # Top five awards by Amount - bar chart - plotly
+    df_aggregated_org = df.groupby('title', as_index=False)['amount'].sum()
+    df_aggregated_org = df_aggregated_org.sort_values(by='amount', ascending=False).head(5)
+
+    # Horizontal bar
+    fig4 = px.bar(df_aggregated_org, 
+                x='amount', 
+                y='title', 
+                orientation='h',
+                hover_data={'title': True, 'amount': True},  # Show name on hover, not award
+                labels={'amount': 'Amount in USD', 'title': 'Award'},
+                title="Top Five Awards by Amount",
+                color='title')
+
+    # Legend
+    fig4.update_layout(
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.6,
+            xanchor="center",
+            x=0.5
+        ),
+        yaxis_showticklabels=False,
+        title_x=0.5
+    )
+
+
+    # Adding award totals together for same departments and years
+    award_agg = df.groupby(['Year', 'org_abbr'])['amount'].sum().reset_index()
+
+    # Adding award totals together for same years and filling in for missing year values for department + 0 total
+    full_years = pd.DataFrame({'Year': range(award_agg['Year'].min(), award_agg['Year'].max() + 1)})
+    categories = pd.DataFrame({'org_abbr': award_agg['org_abbr'].unique()})
+    full_index = pd.merge(full_years, categories, how='cross')
+    df_full = pd.merge(full_index, award_agg, on=['Year', 'org_abbr'], how='left').fillna({'amount': 0})
+
+    fig5 = px.line(df_full, x="Year", y="amount", color='org_abbr')
+
+    fig5.update_layout(
+        title="Department Awards by Year",
+        xaxis_title="Year",
+        yaxis_title="Award Total in USD",
+    )
+
 
     # Convert the plotly figure to JSON
-    graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
-    return graphJSON
-    
-    ### Can also return as an object with other json objects like below
-    # return json.dumps({'bar': graphJSON, 'line': graphJSON2, 'scatter': graphJSON3})
+    graphJSON1 = json.dumps(fig1, cls=plotly.utils.PlotlyJSONEncoder)
+    graphJSON2 = json.dumps(fig2, cls=plotly.utils.PlotlyJSONEncoder)
+    graphJSON3 = json.dumps(fig3, cls=plotly.utils.PlotlyJSONEncoder)
+    graphJSON4 = json.dumps(fig4, cls=plotly.utils.PlotlyJSONEncoder)
+    graphJSON5 = json.dumps(fig5, cls=plotly.utils.PlotlyJSONEncoder)
+
+    return json.dumps({'fig1': graphJSON1, 'fig2': graphJSON2, 'fig3': graphJSON3, 'fig4': graphJSON4, 'fig5': graphJSON5})
 
 
 
