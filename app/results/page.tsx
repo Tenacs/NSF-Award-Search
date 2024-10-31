@@ -62,36 +62,37 @@ function Results() {
     } else {
       setIsPlotlyScriptLoaded(true);
   }
+    const advancedQuery = getAdvancedSearch(searchParams);
 
     // fetch results based on search query
     if (searchParams.get('searchType') == 'title'){
       const title = searchParams.get('title') ?? ''
       setSearchQuery(title)
-      fetchAwards(`/api/search_award_title?title=${title}`, title);
+      fetchAwards(`/api/search_award_title?title=${title + advancedQuery}`, title);
     }
     else if (searchParams.get('searchType') == 'name'){
       const name = searchParams.get('name') ?? ''
       setSearchQuery(name)
-      fetchAwards(`/api/search_name?name=${name}&includeCoPI=${searchParams.get('includeCoPI') ?? ''}`, name);
+      fetchAwards(`/api/search_name?name=${name}&includeCoPI=${searchParams.get('includeCoPI') ?? ''}${advancedQuery}`, name);
     }
     else if (searchParams.get('searchType') == 'program'){
-      const program = searchParams.get('program') 
-      const programOfficer = searchParams.get('programOfficer')
-      const elementCode = searchParams.get('elementCode') 
-      const referenceCode = searchParams.get('referenceCode')
-      setSearchQuery(program ?? programOfficer ?? elementCode ?? referenceCode ?? '')
-      // TO-DO
-      //fetchAwards(`/api/search_program?program=${searchParams.get('program') ?? ''}, program);
+      const program = searchParams.get('program')  ?? ''
+      const programOfficer = searchParams.get('programOfficer')  ?? ''
+      const elemCode = searchParams.get('elementCode')  ?? ''
+      const refCode = searchParams.get('referenceCode')  ?? ''
+      setSearchQuery(program ?? programOfficer ?? elemCode ?? refCode ?? '')
+
+      fetchAwards(`/api/search_program?program=${program}&programOfficer=${programOfficer}&elementCode=${elemCode}&referenceCode=${refCode + advancedQuery}`, program);
     }
     else if (searchParams.get('searchType') == 'organization'){
       const org = searchParams.get('organization') ?? ''
       setSearchQuery(org)
-      fetchAwards(`/api/search_institution?institution=${org}`, org);
+      fetchAwards(`/api/search_institution?institution=${org  + advancedQuery}`, org);
     }
     else if (searchParams.get('keyword')){
       const keyword = searchParams.get('keyword') ?? ''
       setSearchQuery(keyword)
-      fetchAwards(`/api/search_keyword?keyword=${keyword}`, keyword);
+      fetchAwards(`/api/search_keyword?keyword=${keyword  + advancedQuery}`, keyword);
     }
     else{
       setMessage("Please enter a search query")
@@ -99,6 +100,25 @@ function Results() {
 
   }, []);
 
+  function getAdvancedSearch(params: URLSearchParams){
+    var query = ''
+    if (params.get('state')){
+      query += `&state=${params.get('state')}`
+    }
+    if (params.get('country')){
+      query += `&country=${params.get('country')}`
+    }
+    if (params.get('zipCode')){
+      query += `&zipCode=${params.get('zipCode')}`
+    }
+    if (params.get('startYear')){
+      query += `&startYear=${params.get('startYear')}`
+    }
+    if (params.get('endYear')){
+      query += `&endYear=${params.get('endYear')}`
+    }
+    return query
+  }
 
   // Fetch plot data whenever results change
   useEffect(() => {
@@ -176,7 +196,7 @@ function Results() {
       console.error('Error:', error)
     })
 
-    console.log('Searching for:', searchQuery)
+    console.log('Searching for:', query)
   }
   
   const handleExport = (format: string) => {
@@ -327,7 +347,7 @@ function Results() {
 
           {message.length == 0 && results.slice((currentPage - 1) * resultsPerPage, currentPage * resultsPerPage).map((result, index) => (
             <div key={index} className={`p-4 ${index !== results.length - 1 ? 'border-b' : ''}`}>
-              <a href={`https://www.nsf.gov/awardsearch/showAward?AWD_ID=${result.awardID}`} target="_blank" className="text-blue-600 hover:underline text-lg">
+                <a href={`https://www.nsf.gov/awardsearch/showAward?AWD_ID=${result.awardID?.replace(/<\/?b>/g, '')}`} target="_blank" className="text-blue-600 hover:underline text-lg">
                 {result.title}
               </a>
               <p className="text-sm text-gray-600">
@@ -335,7 +355,7 @@ function Results() {
                 Principal Investigator: <span dangerouslySetInnerHTML={{ __html: result.primary_investigators ?? '' }} />; 
                 Co-Principal Investigator: <span dangerouslySetInnerHTML={{ __html: result.co_primary_investigators ?? '' }} />;
                 Organization: <span dangerouslySetInnerHTML={{ __html: result.institution ?? '' }} />;
-                NSF Organization: {result.org_abbr}; Start Date: {result.effectiveDate}; 
+                NSF Organization: {result.org_abbr ?? result.org_name}; Start Date: {result.effectiveDate}; 
                 Award Amount: ${result.amount?.toLocaleString()};
               </p>
             </div>

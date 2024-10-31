@@ -16,9 +16,11 @@ def get_db_connection():
     conn = sqlite3.connect('api/Awards.db')
     return conn
 
-def query_to_json(query, params=()):
+def query_to_json(q, args, params=()):
+    query = q + get_advanced_search(args)[0]
+    parameters = params + get_advanced_search(args)[1]
     conn = get_db_connection()
-    df = pd.read_sql_query(query + " LIMIT 3000", conn, params=params)
+    df = pd.read_sql_query(query + " LIMIT 3000", conn, params=parameters)
     conn.close()
     return df.to_json(orient='records')
 
@@ -27,10 +29,10 @@ def query_to_json(query, params=()):
 @app.route('/search_keyword', methods=['GET'])
 def search_by_keyword():
     keyword = request.args.get('keyword')
-    query = """SELECT * FROM awards WHERE title LIKE ? OR awardID = ? OR institution LIKE ? OR primary_investigators LIKE ? 
+    query = """SELECT * FROM awards WHERE (title LIKE ? OR awardID = ? OR institution LIKE ? OR primary_investigators LIKE ? 
                 OR co_primary_investigators LIKE ? OR programOfficer LIKE ? OR org_abbr LIKE ? OR org_name LIKE ? 
-                OR programElementCodes LIKE ? OR programReferenceCodes LIKE ?""" 
-    return query_to_json(query, (f"%{keyword}%", keyword, f"%{keyword}%", f"%{keyword}%", f"%{keyword}%", f"%{keyword}%", f"%{keyword}%", f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"))
+                OR programElementCodes LIKE ? OR programReferenceCodes LIKE ?)""" 
+    return query_to_json(query, request.args, (f"%{keyword}%", keyword, f"%{keyword}%", f"%{keyword}%", f"%{keyword}%", f"%{keyword}%", f"%{keyword}%", f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"))
 
 
 
@@ -40,8 +42,8 @@ def search_by_keyword():
 @app.route('/search_award_title', methods=['GET'])
 def search_by_award_title():
     title = request.args.get('title')
-    query = "SELECT * from awards where title LIKE ? OR awardID = ?"
-    return query_to_json(query, (f"%{title}%", title))
+    query = "SELECT * from awards where (title LIKE ? OR awardID = ?)"
+    return query_to_json(query, request.args, (f"%{title}%", title))
 
 
 # Search by Investigator Name
@@ -54,39 +56,39 @@ def search_by_name():
     params = (f"%{investigator_name}%",)
 
     if includeCoPI == 'true':
-        query = "SELECT * FROM awards WHERE primary_investigators LIKE ? OR co_primary_investigators LIKE ?"
+        query = "SELECT * FROM awards WHERE (primary_investigators LIKE ? OR co_primary_investigators LIKE ?)"
         params = (f"%{investigator_name}%", f"%{investigator_name}%")
 
-    return query_to_json(query, params)
+    return query_to_json(query, request.args, params)
 
 
 # Search by Program 
 @app.route('/search_program', methods=['GET'])
 def search_by_program():
-    org_name = request.args.get('org_name')
-    officer_name = request.args.get('programOfficer')
-    ref_code = request.args.get('programReferenceCodes')
-    ele_code = request.args.get('programElementCodes')
+    program = request.args.get('program')
+    programOfficer = request.args.get('programOfficer')
+    refCode = request.args.get('referenceCode')
+    eleCode = request.args.get('elementCode')
     query = "SELECT * FROM awards WHERE 1=1"
-    params = []
+    params = ()
 
-    if officer_name:
-        query += " AND programOfficer LIKE ?"
-        params.append(f"%{officer_name}%")
-
-    if org_name:
+    if program:
         query += " AND org_name LIKE ?"
-        params.append(f"%{org_name}%")
+        params += (f"%{program}%",)
 
-    if ref_code:
+    if programOfficer:
+        query += " AND programOfficer LIKE ?"
+        params += (f"%{programOfficer}%",)
+
+    if refCode:
         query += " AND programReferenceCodes LIKE ?"
-        params.append(f"%{ref_code}%")
+        params += (f"%{refCode}%",)
 
-    if ele_code:
+    if eleCode:
         query += " AND programElementCodes LIKE ?"
-        params.append(f"%{ele_code}%")
+        params += (f"%{eleCode}%",)
 
-    return query_to_json(query, params)
+    return query_to_json(query, request.args, params)
 
 
 # Search by Organization/University
@@ -94,80 +96,41 @@ def search_by_program():
 def search_by_institution():
     institution_name = request.args.get('institution')
     query = "SELECT * FROM awards WHERE institution LIKE ?"
-    return query_to_json(query, (f"%{institution_name}%",))
+    return query_to_json(query, request.args, (f"%{institution_name}%",))
 
 # Advanced Search Function
-@app.route('/advanced_search', methods=['GET'])
-def advanced_search():
-    # Search parameters from the request
-    title = request.args.get('title')
-    award_id = request.args.get('awardID')
-    institution = request.args.get('institution')
-    investigator = request.args.get('investigator')
-    program = request.args.get('program')
-    start_year = request.args.get('startYear')
-    end_year = request.args.get('endYear')
-    exp_date = request.args.get('expDate')
-    amount = request.args.get('amount')
-    zip_code = request.args.get('zipCode')
-    state = request.args.get('state')
-    country = request.args.get('country')
+def get_advanced_search(args):
+    start_year = args.get('startYear')
+    end_year = args.get('endYear')
+    zip_code = args.get('zipCode')
+    state = args.get('state')
+    country = args.get('country')
     
     # Start building the SQL query
-    query = "SELECT * FROM awards WHERE 1=1"
-    conditions = []
-    params = []
+    query = ""
+    params = ()
     
-    if title:
-        conditions.append("title LIKE ?")
-        params.append(f"%{title}%")
-    if award_id:
-        conditions.append("awardID = ?")
-        params.append(award_id)
-    if institution:
-        conditions.append("institution LIKE ?")
-        params.append(f"%{institution}%")
-    if investigator:
-        # Search both primary and co-primary investigators
-        conditions.append("(primary_investigators LIKE ? OR co_primary_investigators LIKE ?)")
-        params.extend([f"%{investigator}%", f"%{investigator}%"])
-    if program:
-        # Assume program refers to org_name for this search
-        conditions.append("org_name LIKE ?")
-        params.append(f"%{program}%")
     if start_year and end_year:
         # Match any date within the start and end year by isolating the year
-        conditions.append("CAST(SUBSTR(effectiveDate, -4) AS INTEGER) BETWEEN ? AND ?")
-        params.append(start_year)
-        params.append(end_year)
+        query += " AND CAST(SUBSTR(effectiveDate, -4) AS INTEGER) BETWEEN ? AND ?"
+        params += (start_year, end_year)
     elif start_year:
-        conditions.append("CAST(SUBSTR(effectiveDate, -4) AS INTEGER) >= ?")
-        params.append(start_year)
+        query += " AND CAST(SUBSTR(effectiveDate, -4) AS INTEGER) >= ?"
+        params += (start_year,)
     elif end_year:
-        conditions.append("CAST(SUBSTR(effectiveDate, -4) AS INTEGER) <= ?")
-        params.append(end_year)
-    if exp_date:
-        conditions.append("expDate <= ?")
-        params.append(exp_date)
-    if amount:
-        conditions.append("amount >= ?")
-        params.append(amount)
+        query += " AND CAST(SUBSTR(effectiveDate, -4) AS INTEGER) <= ?"
+        params += (end_year,)
     if zip_code:
-        conditions.append("zipCode = ?")
-        params.append(zip_code)
+        query += " AND zipCode = ?"
+        params += (zip_code,)
     if state:
-        conditions.append("state LIKE ?")
-        params.append(f"%{state}%")
+        query += " AND state LIKE ?"
+        params += (f"%{state}%",)
     if country:
-        conditions.append("country LIKE ?")
-        params.append(f"%{country}%")
+        query += " AND country LIKE ?"
+        params += (f"%{country}%",)
 
-    # Combine conditions to form the WHERE clause
-    if conditions:
-        query += " AND " + " AND ".join(conditions)
-
-    # Execute and return JSON results
-    return query_to_json(query, params)
+    return [query, params]
 
 
 # Data Visualization - Charts
