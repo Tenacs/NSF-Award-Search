@@ -136,40 +136,25 @@ def get_advanced_search(args):
 # Data Visualization - Charts
 @app.route('/example', methods=['POST'])
 def pandas_example():
-
     data = request.json
-    df = pd.DataFrame(data)  # Create DataFrame from JSON
+    df = pd.DataFrame(data)
 
-
-    # Add state abbreviation column
-    df['State'] = df['state'].apply(lambda x: us.states.lookup(x).abbr if x is not None and us.states.lookup(x) else None)
-
-    # Extract year from effectiveDate and add as a new column
+    df['State'] = df['state'].apply(lambda x: us.states.lookup(x).abbr if x and us.states.lookup(x) else None)
     df['Year'] = pd.to_datetime(df['effectiveDate']).dt.year
 
-    # Organization
-    # Department division by number of awards - pie chart with plotly
+    # Figure 1: Departments by Number of Awards
     dep_counts = df['org_abbr'].value_counts()
-    fig1 = px.pie(dep_counts, values=dep_counts, names=dep_counts.index, title='Departments by Number of Awards')
-    fig1.update_layout()    
+    fig1 = px.pie(values=dep_counts, names=dep_counts.index, title='Departments by Number of Awards')
 
-    # Department by Year - Bar Chart
+    # Figure 2: Department by Year
     df['effectiveYear'] = pd.to_datetime(df['effectiveDate']).dt.year
-    ptable = pd.pivot_table(df, values='amount', index='effectiveYear', columns='org_abbr', aggfunc='sum')
-    ptable = ptable.fillna(0).reset_index()
-
-    # Convert the pivot table to long format for plotly
-    ptable_long = pd.melt(ptable, id_vars=['effectiveYear'], value_vars=ptable.columns[1:], var_name='Department', value_name='AwardTotal')
-
-    # Create the plotly figure
+    ptable = pd.pivot_table(df, values='amount', index='effectiveYear', columns='org_abbr', aggfunc='sum').fillna(0).reset_index()
+    ptable_long = pd.melt(ptable, id_vars=['effectiveYear'], var_name='Department', value_name='AwardTotal')
     fig2 = px.bar(ptable_long, x='effectiveYear', y='AwardTotal', color='Department', title='Department by Year')
 
-
-    # Convert amount to numeric
+    # Figure 3: US States by Award Amount
     df['amount'] = pd.to_numeric(df['amount'])
     df_aggregated = df.groupby('State', as_index=False)['amount'].sum()
-
-    # Choropleth map using plotly
     fig3 = px.choropleth(
         df_aggregated,
         locations='State',
@@ -179,69 +164,43 @@ def pandas_example():
         color_continuous_scale="Viridis",
         title="US States by Award Amount",
     )
+    fig3.update_layout(coloraxis_colorbar=dict(title="Awards in USD"))
 
-    fig3.update_layout(
-        coloraxis_colorbar=dict(
-            title="Awards in USD"
-        )
+    # Figure 4: Top Five Awards by Amount
+    df_aggregated_org = df.groupby('title', as_index=False)['amount'].sum().sort_values(by='amount', ascending=False).head(5)
+    fig4 = px.bar(
+        df_aggregated_org,
+        x='amount',
+        y='title',
+        orientation='h',
+        labels={'amount': 'Amount in USD', 'title': 'Award'},
+        title="Top Five Awards by Amount",
+        color='title'
     )
-
-
-    # Individual
-    # Top five awards by Amount - bar chart - plotly
-    df_aggregated_org = df.groupby('title', as_index=False)['amount'].sum()
-    df_aggregated_org = df_aggregated_org.sort_values(by='amount', ascending=False).head(5)
-
-    # Horizontal bar
-    fig4 = px.bar(df_aggregated_org, 
-                x='amount', 
-                y='title', 
-                orientation='h',
-                hover_data={'title': True, 'amount': True},  # Show name on hover, not award
-                labels={'amount': 'Amount in USD', 'title': 'Award'},
-                title="Top Five Awards by Amount",
-                color='title')
-
-    # Legend
     fig4.update_layout(
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=-0.6,
-            xanchor="center",
-            x=0.5
-        ),
+        legend=dict(orientation="h", yanchor="bottom", y=-0.6, xanchor="center", x=0.5),
         yaxis_showticklabels=False,
         title_x=0.5
     )
 
-
-    # Adding award totals together for same departments and years
+    # Figure 5: Department Awards by Year
     award_agg = df.groupby(['Year', 'org_abbr'])['amount'].sum().reset_index()
-
-    # Adding award totals together for same years and filling in for missing year values for department + 0 total
     full_years = pd.DataFrame({'Year': range(award_agg['Year'].min(), award_agg['Year'].max() + 1)})
     categories = pd.DataFrame({'org_abbr': award_agg['org_abbr'].unique()})
     full_index = pd.merge(full_years, categories, how='cross')
     df_full = pd.merge(full_index, award_agg, on=['Year', 'org_abbr'], how='left').fillna({'amount': 0})
+    fig5 = px.line(df_full, x="Year", y="amount", color='org_abbr', title="Department Awards by Year", labels={'amount': 'Award Total in USD'})
 
-    fig5 = px.line(df_full, x="Year", y="amount", color='org_abbr')
+    # Convert figures to JSON
+    figures = {
+        'fig1': json.dumps(fig1, cls=plotly.utils.PlotlyJSONEncoder),
+        'fig2': json.dumps(fig2, cls=plotly.utils.PlotlyJSONEncoder),
+        'fig3': json.dumps(fig3, cls=plotly.utils.PlotlyJSONEncoder),
+        'fig4': json.dumps(fig4, cls=plotly.utils.PlotlyJSONEncoder),
+        'fig5': json.dumps(fig5, cls=plotly.utils.PlotlyJSONEncoder),
+    }
 
-    fig5.update_layout(
-        title="Department Awards by Year",
-        xaxis_title="Year",
-        yaxis_title="Award Total in USD",
-    )
-
-
-    # Convert the plotly figure to JSON
-    graphJSON1 = json.dumps(fig1, cls=plotly.utils.PlotlyJSONEncoder)
-    graphJSON2 = json.dumps(fig2, cls=plotly.utils.PlotlyJSONEncoder)
-    graphJSON3 = json.dumps(fig3, cls=plotly.utils.PlotlyJSONEncoder)
-    graphJSON4 = json.dumps(fig4, cls=plotly.utils.PlotlyJSONEncoder)
-    graphJSON5 = json.dumps(fig5, cls=plotly.utils.PlotlyJSONEncoder)
-
-    return json.dumps({'fig1': graphJSON1, 'fig2': graphJSON2, 'fig3': graphJSON3, 'fig4': graphJSON4, 'fig5': graphJSON5})
+    return json.dumps(figures)
 
 
 

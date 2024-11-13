@@ -199,10 +199,33 @@ function Results() {
     console.log('Searching for:', query)
   }
   
-  const handleExport = (format: string) => {
-    // Implement export logic here
-    console.log('Exporting in format:', format)
-  }
+    // Exporting to JSON
+    const exportToJSON = () => {
+      const jsonString = JSON.stringify(results, null, 2); // 2 spaces for pretty formatting
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "awards.json";
+      link.click();
+      URL.revokeObjectURL(url);
+    };
+
+    // Exporting to CSV
+    const exportToCSV = () => {
+      const header = Object.keys(results[0]).join(",");
+      const rows = results.map(obj => Object.values(obj).join(",")).join("\n");
+      const csvString = header + "\n" + rows;
+      const blob = new Blob([csvString], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "awards.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+  };
 
   // Function to sort results
   const sortResults = (results: Award[], sortBy: string) => {
@@ -270,8 +293,8 @@ function Results() {
             {message !== 'Loading...' && <span className="text-sm">Found {results.length} {results.length == 1 ? 'award' : 'awards'}.</span>}
             {results.length > 0 && <>
             <span className="text-sm">Export:</span>
-            <Button variant="outline" size="sm" onClick={() => {}}>CSV</Button>
-            <Button variant="outline" size="sm" onClick={() => {}}>XML</Button> </>}
+            <Button variant="outline" size="sm" onClick={() => {exportToCSV()}}>CSV</Button>
+            <Button variant="outline" size="sm" onClick={() => {exportToJSON()}}>JSON</Button> </>}
           </div>
           <div className="flex items-center space-x-2">
 
