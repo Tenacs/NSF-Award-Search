@@ -14,7 +14,7 @@ import { useRouter} from 'next/navigation'
 
 
 
-interface Award {
+export interface Award {
   awardID?: string;
   title?: string;
   awardNumber?: string;
@@ -41,6 +41,7 @@ function Results() {
   
   const [searchQuery, setSearchQuery] = useState('')
   const [results, setResults] = useState<Award[]>([])
+  const [filteredResults, setFilteredResults] = useState<Award[]>([]);
   const [sortBy, setSortBy] = useState('relevance')
   const [isPlotlyScriptLoaded, setIsPlotlyScriptLoaded] = useState(false);
   const [isGraphLoading, setIsGraphLoading] = useState(false);
@@ -122,10 +123,10 @@ function Results() {
 
   // Fetch plot data whenever results change
   useEffect(() => {
-    if (results.length === 0) return;
+    if (results.length === 0 || filteredResults.length === 0) return;
     setCurrentPage(1)
-    getPlotlyCharts(results);
-  }, [results]);
+    getPlotlyCharts(filteredResults);
+  }, [results, filteredResults]);
 
 
   function getPlotlyCharts(data: Award[]) {
@@ -161,6 +162,7 @@ function Results() {
   // Function to handle search button click - search by keyword
   const handleSearch = () => {
     setResults([])
+    setFilteredResults([]);
     setCurrentPage(1)
     const keyword = searchQuery.trim()
     if (keyword === '') {
@@ -190,6 +192,7 @@ function Results() {
       }));
 
       setResults(sortResults(highlightedData, sortBy))
+      setFilteredResults(sortResults(highlightedData, sortBy))
     })
     .catch((error) => {
       setMessage('An error occurred while fetching data. Please check console for more details.')
@@ -201,7 +204,7 @@ function Results() {
   
     // Exporting to JSON
     const exportToJSON = () => {
-      const jsonString = JSON.stringify(results, null, 2); // 2 spaces for pretty formatting
+      const jsonString = JSON.stringify(filteredResults, null, 2); // 2 spaces for pretty formatting
       const blob = new Blob([jsonString], { type: "application/json" });
       const url = URL.createObjectURL(blob);
 
@@ -214,8 +217,8 @@ function Results() {
 
     // Exporting to CSV
     const exportToCSV = () => {
-      const header = Object.keys(results[0]).join(",");
-      const rows = results.map(obj => Object.values(obj).join(",")).join("\n");
+      const header = Object.keys(filteredResults[0]).join(",");
+      const rows = filteredResults.map(obj => Object.values(obj).join(",")).join("\n");
       const csvString = header + "\n" + rows;
       const blob = new Blob([csvString], { type: "text/csv" });
       const url = URL.createObjectURL(blob);
@@ -228,8 +231,8 @@ function Results() {
   };
 
   // Function to sort results
-  const sortResults = (results: Award[], sortBy: string) => {
-    return [...results].sort((a, b) => {
+  const sortResults = (data: Award[], sortBy: string) => {
+    return [...data].sort((a, b) => {
       if (sortBy === 'date') {
         return new Date(b.effectiveDate || '').getTime() - new Date(a.effectiveDate || '').getTime();
       } else if (sortBy === 'amount') {
@@ -259,13 +262,14 @@ function Results() {
   // Re-sort results whenever sortBy changes
   useEffect(() => {
     setResults(prevResults => sortResults(prevResults, sortBy));
+    setFilteredResults(prevResults => sortResults(prevResults, sortBy));
   }, [sortBy]);
 
 
   return (
     <div className="flex h-screen bg-gray-100">
       <div className="flex flex-col">
-        <Sidebar />
+        <Sidebar results={results} setFilteredResults={setFilteredResults}/>
       </div>
 
       {/* Main content */}
@@ -290,8 +294,8 @@ function Results() {
         {/* Export and sort controls */}
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center space-x-2">
-            {message !== 'Loading...' && <span className="text-sm">Found {results.length} {results.length == 1 ? 'award' : 'awards'}.</span>}
-            {results.length > 0 && <>
+            {message !== 'Loading...' && <span className="text-sm">Found {filteredResults.length} {filteredResults.length == 1 ? 'award' : 'awards'}.</span>}
+            {filteredResults.length > 0 && <>
             <span className="text-sm">Export:</span>
             <Button variant="outline" size="sm" onClick={() => {exportToCSV()}}>CSV</Button>
             <Button variant="outline" size="sm" onClick={() => {exportToJSON()}}>JSON</Button> </>}
@@ -299,7 +303,7 @@ function Results() {
           <div className="flex items-center space-x-2">
 
             {/*Pop up dialog for data visualization*/}
-            {results.length > 0 && 
+            {filteredResults.length > 0 && 
             <Root open={modalIsOpen} onOpenChange={setModalIsOpen}>
               <Trigger asChild>
                 <Button className="mr-4" variant="outline" size="default">Data Visualization</Button>
@@ -368,8 +372,8 @@ function Results() {
 
           {message && <div className="p-4 mt-5 text-center">{message}</div>}
 
-          {message.length == 0 && results.slice((currentPage - 1) * resultsPerPage, currentPage * resultsPerPage).map((result, index) => (
-            <div key={index} className={`p-4 ${index !== results.length - 1 ? 'border-b' : ''}`}>
+          {message.length == 0 && filteredResults.slice((currentPage - 1) * resultsPerPage, currentPage * resultsPerPage).map((result, index) => (
+            <div key={index} className={`p-4 ${index !== filteredResults.length - 1 ? 'border-b' : ''}`}>
                 <a href={`https://www.nsf.gov/awardsearch/showAward?AWD_ID=${result.awardID?.replace(/<\/?b>/g, '')}`} target="_blank" className="text-blue-600 hover:underline text-lg">
                 {result.title}
               </a>
@@ -388,7 +392,7 @@ function Results() {
         {/* Pagination */}
         <div className="flex justify-between items-center mt-4">
           <div className="text-sm text-gray-600">
-            Displaying {results.length == 0 ? 0 : (currentPage - 1) * resultsPerPage + 1} - {Math.min(currentPage * resultsPerPage, results.length)} of {results.length}
+            Displaying {filteredResults.length == 0 ? 0 : (currentPage - 1) * resultsPerPage + 1} - {Math.min(currentPage * resultsPerPage, filteredResults.length)} of {filteredResults.length}
           </div>
           <div className="flex items-center space-x-2">
             <Button 
@@ -399,12 +403,12 @@ function Results() {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm">Page {currentPage} of {Math.ceil(results.length / resultsPerPage) || 1}</span>
+            <span className="text-sm">Page {currentPage} of {Math.ceil(filteredResults.length / resultsPerPage) || 1}</span>
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => setCurrentPage(prev => Math.min(Math.ceil(results.length / resultsPerPage), prev + 1) || 1)}
-              disabled={currentPage === Math.ceil(results.length / resultsPerPage) || results.length === 0}
+              onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredResults.length / resultsPerPage), prev + 1) || 1)}
+              disabled={currentPage === Math.ceil(filteredResults.length / resultsPerPage) || filteredResults.length === 0}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
